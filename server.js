@@ -14,7 +14,6 @@ class Server {
       await $room.updateRoomState({
         status: 'READY',
         obstacles: this.generateObstacles(40),
-        powerups: [],
         gameTime: 0,
       });
     }
@@ -65,11 +64,11 @@ class Server {
   }
 
   async playerAttack(data) {
-    // í¬ì¬ì²´ ê³µê²© íì ì²ë¦¬
+    // í¬ì¬ì²´ ê³µê²© íì ì²ë¦¬
     if (data.type === "projectile") {
       await $room.broadcastToRoom('projectileFired', data);
     } else {
-      // ì´ì  ë°©ìì ê³µê²© ì²ë¦¬ ì ì§ (íì í¸íì±)
+      // ì´ì  ë°©ìì ê³µê²© ì²ë¦¬ ì ì§ (íì í¸íì±)
       await $room.broadcastToRoom('playerAttack', data);
     }
   }
@@ -87,7 +86,7 @@ class Server {
     // Update target health
     await $room.updateUserState(targetId, { 
       health: newHealth,
-      // ë§ì½ ì²´ë ¥ì´ 0ì´ë©´ isDead íëê·¸ë¥¼ ì¤ì 
+      // ë§ì½ ì²´ë ¥ì´ 0ì´ë©´ isDead íëê·¸ë¥¼ ì¤ì 
       isDead: newHealth <= 0 
     });
     
@@ -98,7 +97,7 @@ class Server {
       damage,
       newHealth,
       timestamp,
-      // ì²´ë ¥ì´ 0ì´ë©´ íë ì¤í ì£½ì ìí ì í
+      // ì²´ë ¥ì´ 0ì´ë©´ íë ì¤í ì£½ì ìí ì í
       isDead: newHealth <= 0
     });
     
@@ -160,21 +159,21 @@ class Server {
       flipX: false,
       score: currentState.score || 0,
       lastUpdate: Date.now(),
-      // íë ì´ì¸í¸ìê² deadPlayers ì¸í¸ìì ì ê±°íë¼ê³  ì í¸ ë³´ë´ê¸°
+      // íë ì´ì¸í¸ìê² deadPlayers ì¸í¸ìì ì ê±°íë¼ê³  ì í¸ ë³´ë´ê¸°
       forceRemoveFromDeadPlayers: true
     };
     
     // Update player state with complete data
     await $room.updateMyState(completePlayerState);
     
-    // ë¦¬ì¤í° ì´ë²¤í¸ì forceRemoveFromDeadPlayers íëê·¸ ì¶ê°
+    // ë¦¬ì¤í° ì´ë²¤í¸ì forceRemoveFromDeadPlayers íëê·¸ ì¶ê°
     await $room.broadcastToRoom('playerRespawned', {
       playerId: $sender.account,
       forceRemoveFromDeadPlayers: true,
       ...completePlayerState
     });
     
-    // ê°ì  ìí ìë°ì´í¸ìë íëê·¸ ì¶ê°
+    // ê°ì  ìí ìë°ì´í¸ìë íëê·¸ ì¶ê°
     const allUserStates = await $room.getAllUserStates();
     await $room.broadcastToRoom('forceStateUpdate', {
       states: allUserStates,
@@ -183,13 +182,13 @@ class Server {
       timestamp: Date.now()
     });
     
-    // ë¦¬ì¤í° ìë¦¼ë ì¤ì¼ì¤ë§
+    // ë¦¬ì¤í° ìë¦¼ë ì¤ì¼ì¤ë§
     this.scheduleRespawnReminders($sender.account, completePlayerState);
   }
   
-  // ë¦¬ì¤í° ìë¦¼ í¨ì (ì¤ë³µ ì ì ì ê±°)
+  // ë¦¬ì¤í° ìë¦¼ í¨ì (ì¤ë³µ ì ì ì ê±°)
   async scheduleRespawnReminders(playerId, playerState) {
-    // ì²« ë²ì§¸ ìë¦¼ (500ms)
+    // ì²« ë²ì§¸ ìë¦¼ (500ms)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -204,7 +203,7 @@ class Server {
       }
     }, 500);
     
-    // ë ë²ì§¸ ìë¦¼ (1.5s)
+    // ë ë²ì§¸ ìë¦¼ (1.5s)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -219,7 +218,7 @@ class Server {
       }
     }, 1500);
     
-    // ì¸ ë²ì§¸ ìë¦¼ (3s)
+    // ì¸ ë²ì§¸ ìë¦¼ (3s)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -233,18 +232,6 @@ class Server {
         console.error("Error sending respawn reminder 3:", error);
       }
     }, 3000);
-  }
-
-  async collectPowerup(id) {
-    const roomState = await $room.getRoomState();
-    if (!roomState.powerups) return;
-    
-    // Find and remove powerup from list
-    const powerupIndex = roomState.powerups.findIndex(p => p.id === id);
-    if (powerupIndex !== -1) {
-      roomState.powerups.splice(powerupIndex, 1);
-      await $room.updateRoomState({ powerups: roomState.powerups });
-    }
   }
 
   // Generate random obstacles (for initialization)
@@ -287,7 +274,6 @@ class Server {
   // Room tick function for regular updates
   $roomTick(deltaMS, roomId) {
     this.updateGameState(deltaMS, roomId);
-    this.spawnPowerups(deltaMS, roomId);
     this.checkRespawnedPlayers(deltaMS, roomId);
   }
   
@@ -358,40 +344,6 @@ class Server {
       }
     } catch (error) {
       console.error("Error checking respawned players:", error);
-    }
-  }
-  
-  // Spawn powerups periodically
-  async spawnPowerups(deltaMS, roomId) {
-    const roomState = await $room.getRoomState(roomId);
-    if (!roomState) return;
-    
-    // Check if we should spawn a powerup (every ~10 seconds)
-    const shouldSpawn = Math.random() < deltaMS / 10000;
-    
-    if (shouldSpawn) {
-      const powerups = roomState.powerups || [];
-      
-      // Limit maximum number of powerups
-      if (powerups.length < 5) {
-        // Generate random position
-        const x = Math.floor(Math.random() * 1800) + 100;        const y = Math.floor(Math.random() * 1800) + 100;
-        
-        // Create powerup
-        const powerup = {
-          id: `powerup_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-          type: Math.random() < 0.7 ? 'health' : 'speed',
-          x,
-          y
-        };
-        
-        // Add to list and update room state
-        powerups.push(powerup);
-        await $room.updateRoomState(roomId, { powerups });
-        
-        // Notify clients
-        await $room.broadcastToRoom('powerupSpawned', powerup);
-      }
     }
   }
 }

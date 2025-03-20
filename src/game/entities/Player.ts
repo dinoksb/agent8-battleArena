@@ -7,9 +7,7 @@ export class Player {
   private scene: Phaser.Scene;
   private nameText: Phaser.GameObjects.Text;
   private healthBar: Phaser.GameObjects.Graphics;
-  private speedBoostTimer: number | null = null;
   private normalSpeed: number = 200;
-  private boostedSpeed: number = 300;
   private id: string;
   private name: string;
   private isLocalPlayer: boolean;
@@ -154,9 +152,6 @@ export class Player {
     // Reset velocity
     this.sprite.setVelocity(0);
     
-    // Get current speed (normal or boosted)
-    const speed = this.speedBoostTimer !== null ? this.boostedSpeed : this.normalSpeed;
-    
     // Track if player is moving
     let isMoving = false;
     let directionX = 0;
@@ -164,30 +159,28 @@ export class Player {
     
     // Apply movement based on input
     if (this.cursors.left.isDown || this.wasdKeys.left.isDown) {
-      this.sprite.setVelocityX(-speed);
+      this.sprite.setVelocityX(-this.normalSpeed);
       directionX = -1;
       isMoving = true;
     } else if (this.cursors.right.isDown || this.wasdKeys.right.isDown) {
-      this.sprite.setVelocityX(speed);
+      this.sprite.setVelocityX(this.normalSpeed);
       directionX = 1;
       isMoving = true;
     }
     
     if (this.cursors.up.isDown || this.wasdKeys.up.isDown) {
-      this.sprite.setVelocityY(-speed);
+      this.sprite.setVelocityY(-this.normalSpeed);
       directionY = -1;
-      
-
       isMoving = true;
     } else if (this.cursors.down.isDown || this.wasdKeys.down.isDown) {
-      this.sprite.setVelocityY(speed);
+      this.sprite.setVelocityY(this.normalSpeed);
       directionY = 1;
       isMoving = true;
     }
     
     // Normalize diagonal movement
     if (this.sprite.body.velocity.x !== 0 || this.sprite.body.velocity.y !== 0) {
-      this.sprite.body.velocity.normalize().scale(speed);
+      this.sprite.body.velocity.normalize().scale(this.normalSpeed);
     }
     
     // Update animation based on movement
@@ -296,8 +289,6 @@ export class Player {
     // Emit event for UI updates
     this.scene.events.emit("updateHealth", this.health);
     
-    // Visual feedback - ì¹´ë©ë¼ íë¤ë¦¼ í¨ê³¼ ì ê±° (ë¡ì»¬ íë ì´ì´ë§ GameSceneìì ì²ë¦¬)
-    
     // Store original tint
     const originalTint = this.colorTint;
     
@@ -329,26 +320,6 @@ export class Player {
     this.scene.time.delayedCall(100, () => {
       // Restore original tint
       this.sprite.setTint(originalTint);
-    });
-  }
-  
-  applySpeedBoost(duration: number) {
-    // Clear existing timer if any
-    if (this.speedBoostTimer !== null) {
-      this.scene.time.removeEvent(this.speedBoostTimer);
-    }
-    
-    // Store original tint
-    const originalTint = this.colorTint;
-    
-    // Apply visual effect (cyan tint)
-    this.sprite.setTint(0x00ffff);
-    
-    // Set timer to remove boost after duration
-    this.speedBoostTimer = this.scene.time.delayedCall(duration, () => {
-      // Restore original tint
-      this.sprite.setTint(originalTint);
-      this.speedBoostTimer = null;
     });
   }
   
@@ -396,12 +367,6 @@ export class Player {
     
     // Restore original tint
     this.sprite.setTint(this.colorTint);
-    
-    // Clear speed boost if active
-    if (this.speedBoostTimer !== null) {
-      this.scene.time.removeEvent(this.speedBoostTimer);
-      this.speedBoostTimer = null;
-    }
     
     // Reset animation state
     this.isAttacking = false;

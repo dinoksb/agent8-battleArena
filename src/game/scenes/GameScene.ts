@@ -1,6 +1,5 @@
 import Phaser from "phaser";
 import { Player } from "../entities/Player";
-import { Powerup } from "../entities/Powerup";
 import { KnightConfig } from "../config/KnightConfig";
 
 export class GameScene extends Phaser.Scene {
@@ -8,7 +7,6 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private otherPlayers: Map<string, Player> = new Map();
   private projectiles: Map<string, Phaser.Physics.Arcade.Sprite> = new Map();
-  private powerups: Phaser.Physics.Arcade.Group | null = null;
   
   // Map elements
   private map!: Phaser.Tilemaps.Tilemap;
@@ -73,7 +71,6 @@ export class GameScene extends Phaser.Scene {
       frameHeight: KnightConfig.frameHeight
     });
     this.load.image("projectile", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/bullets/bullet7.png");
-    this.load.image("powerup", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/orb-red.png");
     this.load.image("obstacle", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/block.png");
     this.load.image("background", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/skies/space3.png");
   }
@@ -105,9 +102,6 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, 2000, 2000);
     this.cameras.main.startFollow(this.player.sprite, true, 0.09, 0.09);
     this.cameras.main.setZoom(1);
-    
-    // Create powerups group
-    this.powerups = this.physics.add.group();
     
     // Setup input
     this.setupInput();
@@ -175,9 +169,6 @@ export class GameScene extends Phaser.Scene {
     // Subscribe to projectile creation events
     this.server.onRoomMessage(this.roomId, "projectileFired", this.handleProjectileFired.bind(this));
     
-    // Subscribe to powerup creation events
-    this.server.onRoomMessage(this.roomId, "powerupSpawned", this.handlePowerupSpawned.bind(this));
-    
     // Subscribe to room state for obstacles
     this.server.subscribeRoomState(this.roomId, (state: any) => {
       if (state && state.obstacles && !this.obstaclesCreated) {
@@ -210,22 +201,22 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // ì¶ê°: íë ì´ì´ê° ì£½ì ì´ë²¤í¸ êµ¬ë
+    // ì¶ê°: íë ì´ì´ê° ì£½ì ì´ë²¤í¸ êµ¬ë
     this.server.onRoomMessage(this.roomId, "playerDied", (data: any) => {
       const { playerId } = data;
       
-      // ë´ ìºë¦­í°ê° ì£½ìì ëë§ ì²ë¦¬
+      // ë´ ìºë¦­í°ê° ì£½ìì ëë§ ì²ë¦¬
       if (playerId === this.myAccount) {
-        // ì£½ì ì´ë²¤í¸ ë°ì, UI íì
+        // ì£½ì ì´ë²¤í¸ ë°ì, UI íì
         window.dispatchEvent(new CustomEvent('player-died'));
         
-        // deadPlayers ì¸í¸ì ì¶ê°
+        // deadPlayers ì¸í¸ì ì¶ê°
         this.deadPlayers.add(playerId);
       } else if (this.otherPlayers.has(playerId)) {
-        // ë¤ë¥¸ íë ì´ì´ê° ì£½ìì ê²½ì° deadPlayers ì¸í¸ì ì¶ê°
+        // ë¤ë¥¸ íë ì´ì´ê° ì£½ìì ê²½ì° deadPlayers ì¸í¸ì ì¶ê°
         this.deadPlayers.add(playerId);
         
-        // ë¤ë¥¸ íë ì´ì´ì ìºë¦­í° í¬ëªí ì²ë¦¬
+        // ë¤ë¥¸ íë ì´ì´ì ìºë¦­í° í¬ëªí ì²ë¦¬
         const player = this.otherPlayers.get(playerId);
         if (player) {
           player.setHealth(0);
@@ -469,53 +460,6 @@ export class GameScene extends Phaser.Scene {
     return projectile;
   }
 
-  private handlePowerupSpawned(data: any) {
-    // Check if scene is active and necessary resources are loaded
-    if (!this.scene.isActive() || !this.assetsLoaded || !this.powerups) {
-      console.warn("Scene not active, assets not loaded, or powerups group not initialized");
-      return;
-    }
-    
-    try {
-      const powerup = new Powerup(
-        this,
-        data.x,
-        data.y,
-        "powerup",
-        data.id,
-        data.type
-      );
-      
-      if (powerup && powerup.sprite) {
-        this.powerups.add(powerup.sprite);
-      }
-    } catch (error) {
-      console.error("Error creating powerup:", error);
-    }
-  }
-
-  private collectPowerup(playerSprite: Phaser.Physics.Arcade.Sprite, powerupSprite: Phaser.Physics.Arcade.Sprite) {
-    if (!powerupSprite) return;
-    
-    const powerupId = powerupSprite.getData("id");
-    const powerupType = powerupSprite.getData("type");
-    
-    // Apply powerup effect
-    if (powerupType === "health") {
-      this.player.heal(25);
-    } else if (powerupType === "speed") {
-      this.player.applySpeedBoost(5000); // 5 seconds
-    }
-    
-    // Remove powerup
-    powerupSprite.destroy();
-    
-    // Notify server if initialized
-    if (this.serverInitialized) {
-      this.server.remoteFunction("collectPowerup", [powerupId]);
-    }
-  }
-
   // Handle player hit sync message from server
   private handlePlayerHitSync(data: any) {
     const { targetId, attackerId, damage, newHealth, timestamp, forceRemoveFromDeadPlayers, isDead } = data;
@@ -532,7 +476,7 @@ export class GameScene extends Phaser.Scene {
       // Update our health to match server's value
       this.player.setHealth(newHealth);
       
-      // ë¡ì»¬ íë ì´ì´ê° ë§ìì ëë§ ì¹´ë©ë¼ íë¤ë¦¼ í¨ê³¼ ì ì©
+      // ë¡ì»¬ íë ì´ì´ê° ë§ìì ëë§ ì¹´ë©ë¼ íë¤ë¦¼ í¨ê³¼ ì ì©
       this.cameras.main.shake(100, 0.01);
       
       // Check if player died
@@ -653,7 +597,7 @@ export class GameScene extends Phaser.Scene {
     
     console.log(`Player respawned: ${playerId}, forceRemoveFromDeadPlayers: ${forceRemoveFromDeadPlayers}`);
     
-    // ë´ ìºë¦­í°ì¸ ê²½ì° ì²ë¦¬íì§ ìì (ë¡ì»¬ìì ì´ë¯¸ ì²ë¦¬ë¨)
+    // ë´ ìºë¦­í°ì¸ ê²½ì° ì²ë¦¬íì§ ìì (ë¡ì»¬ìì ì´ë¯¸ ì²ë¦¬ë¨)
     if (playerId === this.myAccount) return;
     
     // Force remove from deadPlayers set if flag is present
@@ -732,11 +676,11 @@ export class GameScene extends Phaser.Scene {
       this.deadPlayers.delete(respawnedPlayerId);
       console.log(`Removed player ${respawnedPlayerId} from deadPlayers set due to force state update`);
     } else if (forceRemoveFromDeadPlayers) {
-      // ëª¨ë  íë ì´ì´ì ëí´ forceRemoveFromDeadPlayersê° trueì¸ ê²½ì°
-      // ë¦¬ì¤í°ë íë ì´ì´ë¤ì deadPlayers ì¸í¸ìì ì ê±°
+      // ëª¨ë  íë ì´ì´ì ëí´ forceRemoveFromDeadPlayersê° trueì¸ ê²½ì°
+      // ë¦¬ì¤í°ë íë ì´ì´ë¤ì deadPlayers ì¸í¸ìì ì ê±°
       if (states) {
         states.forEach((state: any) => {
-          // ì²´ë ¥ì´ ìê³  ë¦¬ì¤í° íëê·¸ê° trueì¸ íë ì´ì´ë¤ì deadPlayersìì ì ê±°
+          // ì²´ë ¥ì´ ìê³  ë¦¬ì¤í° íëê·¸ê° trueì¸ íë ì´ì´ë¤ì deadPlayersìì ì ê±°
           if (state.health > 0 && (state.isRespawned || state.forceRemoveFromDeadPlayers)) {
             this.deadPlayers.delete(state.account);
           }
@@ -765,7 +709,7 @@ export class GameScene extends Phaser.Scene {
       console.log(`Local player hit. Current health: ${this.player.health}`);
       this.player.damage(damage);
       
-      // ë¡ì»¬ íë ì´ì´ê° ë§ìì ëë§ ì¹´ë©ë¼ íë¤ë¦¼ í¨ê³¼ ì ì©
+      // ë¡ì»¬ íë ì´ì´ê° ë§ìì ëë§ ì¹´ë©ë¼ íë¤ë¦¼ í¨ê³¼ ì ì©
       this.cameras.main.shake(100, 0.01);
       
       const newHealth = this.player.health;
@@ -786,7 +730,7 @@ export class GameScene extends Phaser.Scene {
         targetPlayer.damage(damage);
         
         // Store the damaged player's new health and timestamp
-        const newHealth = targetPlayer.health;
+        const newHealth =targetPlayer.health;
         this.damagedPlayers.set(targetId, newHealth);
         this.damageTimestamps.set(targetId, timestamp);
         
@@ -874,7 +818,7 @@ export class GameScene extends Phaser.Scene {
       name: this.playerName,
       animation: currentAnimation,
       flipX: this.player.sprite.flipX,
-      // ì£½ì ìíë í¨ê» ì ì¡
+      // ì£½ì ìíë í¨ê» ì ì¡
       isDead: this.player.isDead()
     };
     
@@ -899,12 +843,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateRoomState(roomState: any) {
-    // Handle room state updates
-    if (roomState.powerups) {
-      // Sync powerups with server state
-      this.syncPowerups(roomState.powerups);
-    }
-    
     // Create obstacles if not yet created and obstacle data exists
     if (!this.obstaclesCreated && roomState.obstacles) {
       this.createObstaclesFromServer(roomState.obstacles);
@@ -978,9 +916,9 @@ export class GameScene extends Phaser.Scene {
           }
           
           // Health update logic - MODIFIED TO HANDLE RESPAWNS
-          // ìë²ê° ëªìì  ì ë³´ë¥¼ ë°ì: ëªìì ì¸ isDead íëê·¸ê° ìëì§ íì¸
+          // ìë²ê° ëªìì  ì ë³´ë¥¼ ë°ì: ëªìì ì¸ isDead íëê·¸ê° ìëì§ íì¸
           if (playerState.isDead) {
-            // ìë²ìì ì£½ì ìíë¼ê³  ë³´ë´ë©´ ë¬´ì¡°ê±´ ì£½ì ìíë¡ ì²ë¦¬
+            // ìë²ìì ì£½ì ìíë¼ê³  ë³´ë´ë©´ ë¬´ì¡°ê±´ ì£½ì ìíë¡ ì²ë¦¬
             player.setHealth(0);
             this.deadPlayers.add(playerId);
           } else if (this.deadPlayers.has(playerId) && !playerState.forceRemoveFromDeadPlayers) {
@@ -1099,34 +1037,5 @@ export class GameScene extends Phaser.Scene {
         this.otherPlayers.delete(id);
       }
     });
-  }
-
-  private syncPowerups(powerupData: any[]) {
-    if (!this.powerups || !this.assetsLoaded) return;
-    
-    try {
-      // Clear existing powerups
-      this.powerups.clear(true, true);
-
-      // Create powerups from server data
-      powerupData.forEach(data => {
-        if (!data || !data.id || !data.type) return;
-        
-        const powerup = new Powerup(
-          this,
-          data.x,
-          data.y,
-          "powerup",
-          data.id,
-          data.type
-        );
-        
-        if (powerup && powerup.sprite) {
-          this.powerups?.add(powerup.sprite);
-        }
-      });
-    } catch (error) {
-      console.error("Error syncing powerups:", error);
-    }
   }
 }
