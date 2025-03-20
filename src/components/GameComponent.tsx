@@ -5,6 +5,7 @@ import { GameScene } from "../game/scenes/GameScene";
 import { UIScene } from "../game/scenes/UIScene";
 import GameUI from "./GameUI";
 import RespawnButton from "./RespawnButton";
+import GameInstructions from "./GameInstructions";
 
 interface GameComponentProps {
   playerName: string;
@@ -182,10 +183,13 @@ const GameComponent: React.FC<GameComponentProps> = ({ playerName, roomId, onExi
       </div>
       
       {/* Game canvas container - positioned in the center */}
-      <div className="flex-grow flex justify-center items-center relative">
+      <div className="flex-grow flex flex-col justify-center items-center relative">
         <div className="w-[800px] h-[600px] shadow-lg rounded-lg overflow-hidden">
           <div ref={gameRef} className="w-full h-full" />
         </div>
+        
+        {/* Game Instructions below the canvas */}
+        <GameInstructions className="mt-3" />
         
         {/* Respawn button overlay - positioned over the game canvas */}
         {isPlayerDead && (

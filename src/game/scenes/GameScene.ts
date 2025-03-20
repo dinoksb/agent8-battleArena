@@ -124,14 +124,6 @@ export class GameScene extends Phaser.Scene {
       this.updatePlayerOnServer();
     }
     
-    // Add help text
-    this.add.text(16, 16, "Use arrow keys or WASD to move, SPACE to shoot", {
-      fontSize: "18px",
-      color: "#ffffff",
-      backgroundColor: "#000000",
-      padding: { x: 10, y: 5 }
-    }).setScrollFactor(0).setDepth(100);
-    
     // Mark assets as loaded
     this.assetsLoaded = true;
   }
