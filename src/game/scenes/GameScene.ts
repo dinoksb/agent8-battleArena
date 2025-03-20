@@ -80,6 +80,9 @@ export class GameScene extends Phaser.Scene {
     this.load.image("projectile", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/bullets/bullet7.png");
     this.load.image("obstacle", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/block.png");
     this.load.image("background", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/skies/space3.png");
+    
+    // 투명한 텍스처 로드 (경계선용)
+    this.load.image("invisibleWall", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAEklEQVR42mNgGAWjYBSMglEwCgYAAAi4AAE4hYMOAAAAAElFTkSuQmCC");
   }
 
   create() {
@@ -421,6 +424,7 @@ export class GameScene extends Phaser.Scene {
         obstacleData.forEach(data => {
           if (data && data.x !== undefined && data.y !== undefined) {
             const obstacle = this.obstacles.create(data.x, data.y, "obstacle");
+            // obstacle은 그대로 표시
             obstacle.refreshBody();
           }
         });
@@ -442,13 +446,33 @@ export class GameScene extends Phaser.Scene {
 
   // Create border obstacles (identical on all clients)
   private createBorderObstacles() {
-    // Create border walls
+    // 테두리 장애물 생성 - 이제 보이지 않는 벽을 사용
     for (let i = 0; i < 2000; i += 50) {
-      this.obstacles.create(i, 0, "obstacle").refreshBody();
-      this.obstacles.create(i, 2000, "obstacle").refreshBody();
-      this.obstacles.create(0, i, "obstacle").refreshBody();
-      this.obstacles.create(2000, i, "obstacle").refreshBody();
+      // 상단 벽
+      const topWall = this.obstacles.create(i, 0, "invisibleWall");
+      topWall.setVisible(false); // 시각적으로 보이지 않게 설정
+      topWall.refreshBody();
+      
+      // 하단 벽
+      const bottomWall = this.obstacles.create(i, 2000, "invisibleWall");
+      bottomWall.setVisible(false);
+      bottomWall.refreshBody();
+      
+      // 왼쪽 벽
+      const leftWall = this.obstacles.create(0, i, "invisibleWall");
+      leftWall.setVisible(false);
+      leftWall.refreshBody();
+      
+      // 오른쪽 벽
+      const rightWall = this.obstacles.create(2000, i, "invisibleWall");
+      rightWall.setVisible(false);
+      rightWall.refreshBody();
     }
+    
+    // 테두리 구분을 위한 얇은 선(선택사항)
+    const graphics = this.add.graphics();
+    graphics.lineStyle(2, 0x00ff00, 0.3); // 얇고 투명한 초록색 선
+    graphics.strokeRect(0, 0, 2000, 2000);
   }
 
   private setupInput() {
@@ -974,7 +998,6 @@ export class GameScene extends Phaser.Scene {
     this.player.sprite.setPosition(x, y);
     
     // Reset player state
-    this.player    // Reset player state
     this.player.reset();
     
     // Remove from dead players set
