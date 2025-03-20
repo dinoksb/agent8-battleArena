@@ -42,10 +42,10 @@ export class GameScene extends Phaser.Scene {
   // Track dead players to prevent auto-respawn
   private deadPlayers: Set<string> = new Set();
   
-  // 총알 제거 요청 추적을 위한 변수 추가
+  // ì´ì ì ê±° ìì²­ ì¶ì ì ìí ë³ì ì¶ê°
   private projectileDestroyRequests: Set<string> = new Set();
   
-  // 연결 끊긴 플레이어 추적
+  // ì°ê²° ëê¸´ íë ì´ì´ ì¶ì 
   private disconnectedPlayers: Set<string> = new Set();
   
   constructor() {
@@ -81,7 +81,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image("obstacle", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/block.png");
     this.load.image("background", "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/skies/space3.png");
     
-    // 투명한 텍스처 로드 (경계선용)
+    // í¬ëªí íì¤ì² ë¡ë (ê²½ê³ì ì©)
     this.load.image("invisibleWall", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAEklEQVR42mNgGAWjYBSMglEwCgYAAAi4AAE4hYMOAAAAAElFTkSuQmCC");
   }
 
@@ -171,10 +171,10 @@ export class GameScene extends Phaser.Scene {
     // Subscribe to projectile creation events
     this.server.onRoomMessage(this.roomId, "projectileFired", this.handleProjectileFired.bind(this));
     
-    // 총알 제거 이벤트 구독 추가
+    // ì´ì ì ê±° ì´ë²¤í¸ êµ¬ë ì¶ê°
     this.server.onRoomMessage(this.roomId, "projectileDestroyed", this.handleProjectileDestroyed.bind(this));
     
-    // 플레이어 연결 끊김 이벤트 구독 추가
+    // íë ì´ì´ ì°ê²° ëê¹ ì´ë²¤í¸ êµ¬ë ì¶ê°
     this.server.onRoomMessage(this.roomId, "playerDisconnected", this.handlePlayerDisconnected.bind(this));
     
     // Subscribe to room state for obstacles
@@ -215,29 +215,29 @@ export class GameScene extends Phaser.Scene {
       }
     });
     
-    // 유저 퇴장 이벤트 구독
+    // ì ì  í´ì¥ ì´ë²¤í¸ êµ¬ë
     this.server.onRoomUserLeave(this.roomId, (account: string) => {
-      // 유저가 방을 떠나면 해당 플레이어를 연결 끊김 처리
+      // ì ì ê° ë°©ì ë ëë©´ í´ë¹ íë ì´ì´ë¥¼ ì°ê²° ëê¹ ì²ë¦¬
       console.log(`Player left room: ${account}`);
       this.handlePlayerDisconnected({ playerId: account, timestamp: Date.now() });
     });
 
-    // 주석: 플레이어    // 주석: 플레이어 사망 이벤트 구독
+    // ì£¼ì: íë ì´ì´    // ì£¼ì: íë ì´ì´ ì¬ë§ ì´ë²¤í¸ êµ¬ë
     this.server.onRoomMessage(this.roomId, "playerDied", (data: any) => {
       const { playerId } = data;
       
-      // 만약 자신이 사망한 플레이어라면
+      // ë§ì½ ìì ì´ ì¬ë§í íë ì´ì´ë¼ë©´
       if (playerId === this.myAccount) {
-        // 자신의 사망을 알림, UI 노출
+        // ìì ì ì¬ë§ì ìë¦¼, UI ë¸ì¶
         window.dispatchEvent(new CustomEvent('player-died'));
         
-        // deadPlayers 리스트에 추가
+        // deadPlayers ë¦¬ì¤í¸ì ì¶ê°
         this.deadPlayers.add(playerId);
       } else if (this.otherPlayers.has(playerId)) {
-        // 다른 플레이어가 죽었을 때 deadPlayers 리스트에 추가
+        // ë¤ë¥¸ íë ì´ì´ê° ì£½ìì ë deadPlayers ë¦¬ì¤í¸ì ì¶ê°
         this.deadPlayers.add(playerId);
         
-        // 다른 플레이어의 상태 업데이트 (비활성화)
+        // ë¤ë¥¸ íë ì´ì´ì ìí ìë°ì´í¸ (ë¹íì±í)
         const player = this.otherPlayers.get(playerId);
         if (player) {
           player.setHealth(0);
@@ -246,32 +246,32 @@ export class GameScene extends Phaser.Scene {
     });
   }
   
-  // 플레이어 연결 끊김 핸들러 추가
+  // íë ì´ì´ ì°ê²° ëê¹ í¸ë¤ë¬ ì¶ê°
   private handlePlayerDisconnected(data: any) {
     const { playerId, timestamp } = data;
     
     console.log(`Player disconnected: ${playerId}`);
     
-    // 연결 끊긴 플레이어 목록에 추가
+    // ì°ê²° ëê¸´ íë ì´ì´ ëª©ë¡ì ì¶ê°
     this.disconnectedPlayers.add(playerId);
     
-    // 해당 플레이어 객체가 존재하면 제거
+    // í´ë¹ íë ì´ì´ ê°ì²´ê° ì¡´ì¬íë©´ ì ê±°
     if (this.otherPlayers.has(playerId)) {
       const player = this.otherPlayers.get(playerId);
       
-      // 플레이어 캐릭터 객체 제거
+      // íë ì´ì´ ìºë¦­í° ê°ì²´ ì ê±°
       if (player) {
         player.destroy();
       }
       
-      // 다른 데이터 구조에서도 플레이어 정보 제거
+      // ë¤ë¥¸ ë°ì´í° êµ¬ì¡°ììë íë ì´ì´ ì ë³´ ì ê±°
       this.otherPlayers.delete(playerId);
       this.damagedPlayers.delete(playerId);
       this.damageTimestamps.delete(playerId);
       this.playerAnimations.delete(playerId);
       this.deadPlayers.delete(playerId);
       
-      // 색상 인덱스 해제
+      // ìì ì¸ë±ì¤ í´ì 
       const colorIndex = this.hashCode(playerId) % 8 + 1;
       this.usedColorIndices.delete(colorIndex);
       
@@ -301,7 +301,7 @@ export class GameScene extends Phaser.Scene {
     
     // Update projectiles
     this.projectiles.forEach((projectile, id) => {
-      // 이미 제거 요청이 있는 총알은 처리하지 않음
+      // ì´ë¯¸ ì ê±° ìì²­ì´ ìë ì´ìì ì²ë¦¬íì§ ìì
       if (this.projectileDestroyRequests.has(id)) {
         return;
       }
@@ -310,7 +310,7 @@ export class GameScene extends Phaser.Scene {
       if (this.player && projectile.getData("ownerId") !== this.myAccount && !this.player.isDead()) {
         if (this.physics.overlap(projectile, this.player.sprite)) {
           this.handlePlayerHit(this.myAccount, projectile.getData("ownerId"), id);
-          // 총알 제거 요청 목록에 추가
+          // ì´ì ì ê±° ìì²­ ëª©ë¡ì ì¶ê°
           this.destroyProjectile(id, true);
           return;
         }
@@ -321,7 +321,7 @@ export class GameScene extends Phaser.Scene {
         if (projectile.getData("ownerId") === this.myAccount && !otherPlayer.isDead()) {
           if (this.physics.overlap(projectile, otherPlayer.sprite)) {
             this.handlePlayerHit(playerId, this.myAccount, id);
-            // 총알 제거 요청 목록에 추가
+            // ì´ì ì ê±° ìì²­ ëª©ë¡ì ì¶ê°
             this.destroyProjectile(id, true);
             return;
           }
@@ -330,7 +330,7 @@ export class GameScene extends Phaser.Scene {
       
       // Check for projectile collisions with obstacles
       if (this.physics.overlap(projectile, this.obstacles)) {
-        // 총알이 장애물과 충돌한 경우에도 모든 클라이언트에 알림
+        // ì´ìì´ ì¥ì ë¬¼ê³¼ ì¶©ëí ê²½ì°ìë ëª¨ë  í´ë¼ì´ì¸í¸ì ìë¦¼
         this.destroyProjectile(id, true);
         return;
       }
@@ -338,33 +338,33 @@ export class GameScene extends Phaser.Scene {
       // Remove projectiles that have exceeded their lifetime
       const creationTime = projectile.getData("creationTime");
       if (Date.now() - creationTime > 2000) { // 2 seconds lifetime
-        // 수명이 다한 총알도 모든 클라이언트에 알림
+        // ìëªì´ ë¤í ì´ìë ëª¨ë  í´ë¼ì´ì¸í¸ì ìë¦¼
         this.destroyProjectile(id, true);
       }
     });
   }
 
-  // 총알 제거 메서드 - 네트워크 동기화 포함
+  // ì´ì ì ê±° ë©ìë - ë¤í¸ìí¬ ëê¸°í í¬í¨
   private destroyProjectile(projectileId: string, notifyServer: boolean = false) {
-    // 이미 제거 요청된 총알이면 무시
+    // ì´ë¯¸ ì ê±° ìì²­ë ì´ìì´ë©´ ë¬´ì
     if (this.projectileDestroyRequests.has(projectileId)) {
       return;
     }
     
-    // 총알 제거 요청 목록에 추가
+    // ì´ì ì ê±° ìì²­ ëª©ë¡ì ì¶ê°
     this.projectileDestroyRequests.add(projectileId);
     
-    // 실제 총알 객체 가져오기
+    // ì¤ì  ì´ì ê°ì²´ ê°ì ¸ì¤ê¸°
     const projectile = this.projectiles.get(projectileId);
     if (projectile) {
-      // 시각적 효과 (파티클 등)
+      // ìê°ì  í¨ê³¼ (íí°í´ ë±)
       this.addProjectileDestroyEffect(projectile.x, projectile.y);
       
-      // 총알 객체 제거
+      // ì´ì ê°ì²´ ì ê±°
       projectile.destroy();
       this.projectiles.delete(projectileId);
       
-      // 서버에 알림 (필요한 경우)
+      // ìë²ì ìë¦¼ (íìí ê²½ì°)
       if (notifyServer && this.serverInitialized) {
         this.server.remoteFunction("projectileDestroyed", [{
           projectileId: projectileId,
@@ -375,15 +375,15 @@ export class GameScene extends Phaser.Scene {
       }
     }
     
-    // 약간의 지연 후 제거 요청 목록에서 제거 (메모리 관리)
+    // ì½ê°ì ì§ì° í ì ê±° ìì²­ ëª©ë¡ìì ì ê±° (ë©ëª¨ë¦¬ ê´ë¦¬)
     setTimeout(() => {
       this.projectileDestroyRequests.delete(projectileId);
     }, 5000);
   }
   
-  // 총알 제거 시 시각적 효과 추가
+  // ì´ì ì ê±° ì ìê°ì  í¨ê³¼ ì¶ê°
   private addProjectileDestroyEffect(x: number, y: number) {
-    // 간단한 파티클 효과
+    // ê°ë¨í íí°í´ í¨ê³¼
     const particles = this.add.particles(x, y, 'projectile', {
       speed: { min: 50, max: 100 },
       scale: { start: 0.4, end: 0 },
@@ -392,7 +392,7 @@ export class GameScene extends Phaser.Scene {
       quantity: 8
     });
     
-    // 잠시 후 파티클 제거
+    // ì ì í íí°í´ ì ê±°
     this.time.delayedCall(300, () => {
       particles.destroy();
     });
@@ -416,7 +416,7 @@ export class GameScene extends Phaser.Scene {
         obstacleData.forEach(data => {
           if (data && data.x !== undefined && data.y !== undefined) {
             const obstacle = this.obstacles.create(data.x, data.y, "obstacle");
-            // obstacle은 그대로 표시
+            // obstacleì ê·¸ëë¡ íì
             obstacle.refreshBody();
           }
         });
@@ -438,32 +438,32 @@ export class GameScene extends Phaser.Scene {
 
   // Create border obstacles (identical on all clients)
   private createBorderObstacles() {
-    // 테두리 장애물 생성 - 이제 보이지 않는 벽을 사용
+    // íëë¦¬ ì¥ì ë¬¼ ìì± - ì´ì  ë³´ì´ì§ ìë ë²½ì ì¬ì©
     for (let i = 0; i < 2000; i += 50) {
-      // 상단 벽
+      // ìë¨ ë²½
       const topWall = this.obstacles.create(i, 0, "invisibleWall");
-      topWall.setVisible(false); // 시각적으로 보이지 않게 설정
+      topWall.setVisible(false); // ìê°ì ì¼ë¡ ë³´ì´ì§ ìê² ì¤ì 
       topWall.refreshBody();
       
-      // 하단 벽
+      // íë¨ ë²½
       const bottomWall = this.obstacles.create(i, 2000, "invisibleWall");
       bottomWall.setVisible(false);
       bottomWall.refreshBody();
       
-      // 왼쪽 벽
+      // ì¼ìª½ ë²½
       const leftWall = this.obstacles.create(0, i, "invisibleWall");
       leftWall.setVisible(false);
       leftWall.refreshBody();
       
-      // 오른쪽 벽
+      // ì¤ë¥¸ìª½ ë²½
       const rightWall = this.obstacles.create(2000, i, "invisibleWall");
       rightWall.setVisible(false);
       rightWall.refreshBody();
     }
     
-    // 테두리 구분을 위한 얇은 선(선택사항)
+    // íëë¦¬ êµ¬ë¶ì ìí ìì ì (ì íì¬í­)
     const graphics = this.add.graphics();
-    graphics.lineStyle(2, 0x00ff00, 0.3); // 얇고 투명한 초록색 선
+    graphics.lineStyle(2, 0x00ff00, 0.3); // ìê³  í¬ëªí ì´ë¡ì ì 
     graphics.strokeRect(0, 0, 2000, 2000);
   }
 
@@ -535,7 +535,7 @@ export class GameScene extends Phaser.Scene {
     // Don't create projectiles fired by this player (already created locally)
     if (data.ownerId === this.myAccount) return;
     
-    // 연결 끊긴 플레이어의 총알은 생성하지 않음
+    // ì°ê²° ëê¸´ íë ì´ì´ì ì´ìì ìì±íì§ ìì
     if (this.disconnectedPlayers.has(data.ownerId)) {
       console.log(`Ignoring projectile from disconnected player: ${data.ownerId}`);
       return;
@@ -548,31 +548,31 @@ export class GameScene extends Phaser.Scene {
     }
   }
   
-  // 총알 제거 이벤트 핸들러 추가
+  // ì´ì ì ê±° ì´ë²¤í¸ í¸ë¤ë¬ ì¶ê°
   private handleProjectileDestroyed(data: any) {
     const { projectileId } = data;
     
-    // 자신이 발사한 총알인 경우에는 이미 제거했을 수 있으므로 확인
+    // ìì ì´ ë°ì¬í ì´ìì¸ ê²½ì°ìë ì´ë¯¸ ì ê±°íì ì ìì¼ë¯ë¡ íì¸
     if (this.projectileDestroyRequests.has(projectileId)) {
       return;
     }
     
-    // 다른 클라이언트에서 파괴된 총알을 이 클라이언트에서도 파괴
+    // ë¤ë¥¸ í´ë¼ì´ì¸í¸ìì íê´´ë ì´ìì ì´ í´ë¼ì´ì¸í¸ììë íê´´
     this.destroyProjectile(projectileId, false);
     
-    // 로그 출력 (디버깅용)
+    // ë¡ê·¸ ì¶ë ¥ (ëë²ê¹ì©)
     console.log(`Projectile destroyed by network event: ${projectileId}`);
   }
   
   private createProjectile(data: any) {
     const { x, y, targetX, targetY, id, ownerId } = data;
     
-    // 이미 제거 요청된 총알이면 생성하지 않음
+    // ì´ë¯¸ ì ê±° ìì²­ë ì´ìì´ë©´ ìì±íì§ ìì
     if (this.projectileDestroyRequests.has(id)) {
       return null;
     }
     
-    // 연결 끊긴 플레이어의 총알은 생성하지 않음
+    // ì°ê²° ëê¸´ íë ì´ì´ì ì´ìì ìì±íì§ ìì
     if (this.disconnectedPlayers.has(ownerId)) {
       console.log(`Not creating projectile from disconnected player: ${ownerId}`);
       return null;
@@ -618,7 +618,7 @@ export class GameScene extends Phaser.Scene {
       projectile,
       this.obstacles,
       () => {
-        // 장애물과 충돌 시 총알 제거 및 서버에 알림
+        // ì¥ì ë¬¼ê³¼ ì¶©ë ì ì´ì ì ê±° ë° ìë²ì ìë¦¼
         this.destroyProjectile(id, true);
       },
       undefined,
@@ -632,13 +632,13 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerHitSync(data: any) {
     const { targetId, attackerId, damage, newHealth, timestamp, forceRemoveFromDeadPlayers, isDead, projectileId } = data;
     
-    // 연결 끊긴 플레이어의 피격 이벤트는 무시
+    // ì°ê²° ëê¸´ íë ì´ì´ì í¼ê²© ì´ë²¤í¸ë ë¬´ì
     if (this.disconnectedPlayers.has(targetId)) {
       console.log(`Ignoring hit sync for disconnected player: ${targetId}`);
       return;
     }
     
-    // 만약 projectileId가 존재하면 해당 총알 제거
+    // ë§ì½ projectileIdê° ì¡´ì¬íë©´ í´ë¹ ì´ì ì ê±°
     if (projectileId && this.projectiles.has(projectileId)) {
       this.destroyProjectile(projectileId, false);
     }
@@ -655,7 +655,7 @@ export class GameScene extends Phaser.Scene {
       // Update our health to match server's value
       this.player.setHealth(newHealth);
       
-      // 카메라 효과로 피격 느낌을 강화
+      // ì¹´ë©ë¼ í¨ê³¼ë¡ í¼ê²© ëëì ê°í
       this.cameras.main.shake(100, 0.01);
       
       // Check if player died
@@ -694,7 +694,7 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerAnimation(data: any) {
     const { playerId, animation, flipX, forceRemoveFromDeadPlayers } = data;
     
-    // 연결 끊긴 플레이어의 애니메이션 이벤트는 무시
+    // ì°ê²° ëê¸´ íë ì´ì´ì ì ëë©ì´ì ì´ë²¤í¸ë ë¬´ì
     if (this.disconnectedPlayers.has(playerId)) {
       return;
     }
@@ -736,7 +736,7 @@ export class GameScene extends Phaser.Scene {
   
   // Handle player attack message from server
   private handlePlayerAttack(data: any) {
-    // 연결 끊긴 플레이어의 공격 이벤트는 무시
+    // ì°ê²° ëê¸´ íë ì´ì´ì ê³µê²© ì´ë²¤í¸ë ë¬´ì
     if (this.disconnectedPlayers.has(data.ownerId)) {
       return;
     }
@@ -784,14 +784,14 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerRespawned(data: any) {
     const { playerId, x, y, health, forceRemoveFromDeadPlayers } = data;
     
-    // 연결 끊긴 플레이어의 부활 이벤트는 무시
+    // ì°ê²° ëê¸´ íë ì´ì´ì ë¶í ì´ë²¤í¸ë ë¬´ì
     if (this.disconnectedPlayers.has(playerId)) {
       return;
     }
     
     console.log(`Player respawned: ${playerId}, forceRemoveFromDeadPlayers: ${forceRemoveFromDeadPlayers}`);
     
-    // 자신의 부활은 로컬에서 처리하므로 무시
+    // ìì ì ë¶íì ë¡ì»¬ìì ì²ë¦¬íë¯ë¡ ë¬´ì
     if (playerId === this.myAccount) return;
     
     // Force remove from deadPlayers set if flag is present
@@ -826,7 +826,7 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerRespawnReminder(data: any) {
     const { playerId, playerState, forceRemoveFromDeadPlayers } = data;
     
-    // 연결 끊긴 플레이어의 부활 알림 이벤트는 무시
+    // ì°ê²° ëê¸´ íë ì´ì´ì ë¶í ìë¦¼ ì´ë²¤í¸ë ë¬´ì
     if (this.disconnectedPlayers.has(playerId)) {
       return;
     }
@@ -875,11 +875,11 @@ export class GameScene extends Phaser.Scene {
       this.deadPlayers.delete(respawnedPlayerId);
       console.log(`Removed player ${respawnedPlayerId} from deadPlayers set due to force state update`);
     } else if (forceRemoveFromDeadPlayers) {
-      // 만약 모든 사용자에게 forceRemoveFromDeadPlayers가 true이면
-      // 명시적으로 특정 플레이어가 지정되지 않은 경우 모든 deadPlayers를 초기화
+      // ë§ì½ ëª¨ë  ì¬ì©ììê² forceRemoveFromDeadPlayersê° trueì´ë©´
+      // ëªìì ì¼ë¡ í¹ì  íë ì´ì´ê° ì§ì ëì§ ìì ê²½ì° ëª¨ë  deadPlayersë¥¼ ì´ê¸°í
       if (states) {
         states.forEach((state: any) => {
-          // 상태 체크: 살아있고 명시적으로 forceRemoveFromDeadPlayers가 true인 경우
+          // ìí ì²´í¬: ì´ììê³  ëªìì ì¼ë¡ forceRemoveFromDeadPlayersê° trueì¸ ê²½ì°
           if (state.health > 0 && (state.isRespawned || state.forceRemoveFromDeadPlayers)) {
             this.deadPlayers.delete(state.account);
           }
@@ -896,7 +896,7 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerHit(targetId: string, attackerId: string, projectileId: string) {
     console.log(`Player hit: targetId=${targetId}, attackerId=${attackerId}, projectileId=${projectileId}`);
     
-    // 연결 끊긴 플레이어에 대한 히트는 무시
+    // ì°ê²° ëê¸´ íë ì´ì´ì ëí íí¸ë ë¬´ì
     if (this.disconnectedPlayers.has(targetId)) {
       console.log(`Ignoring hit for disconnected player: ${targetId}`);
       return;
@@ -914,7 +914,7 @@ export class GameScene extends Phaser.Scene {
       console.log(`Local player hit. Current health: ${this.player.health}`);
       this.player.damage(damage);
       
-      // 카메라 효과로 피격 느낌을 강화
+      // ì¹´ë©ë¼ í¨ê³¼ë¡ í¼ê²© ëëì ê°í
       this.cameras.main.shake(100, 0.01);
       
       const newHealth = this.player.health;
@@ -972,7 +972,7 @@ export class GameScene extends Phaser.Scene {
             attackerId,
             damage,
             newHealth,
-            projectileId, // 프로젝타일 ID도 함께 전송
+            projectileId, // íë¡ì íì¼ IDë í¨ê» ì ì¡
             timestamp
           }
         ]);
@@ -1024,7 +1024,7 @@ export class GameScene extends Phaser.Scene {
       name: this.playerName,
       animation: currentAnimation,
       flipX: this.player.sprite.flipX,
-      isDisconnected: false, // 명시적으로 연결 상태 설정
+      isDisconnected: false, // ëªìì ì¼ë¡ ì°ê²° ìí ì¤ì 
       isDead: this.player.isDead()
     };
     
@@ -1089,7 +1089,7 @@ export class GameScene extends Phaser.Scene {
   updatePlayerStates(playerStates: any[]) {
     if (!playerStates) return;
     
-    // 현재 방에 있는 플레이어 ID 추적
+    // íì¬ ë°©ì ìë íë ì´ì´ ID ì¶ì 
     const currentPlayerIds = new Set(playerStates.map(p => p.account));
     
     playerStates.forEach(playerState => {
@@ -1098,9 +1098,9 @@ export class GameScene extends Phaser.Scene {
       // Skip our own player (we handle our own state)
       if (playerId === this.myAccount) return;
       
-      // 연결이 끊어진 플레이어는 처리하지 않음
+      // ì°ê²°ì´ ëì´ì§ íë ì´ì´ë ì²ë¦¬íì§ ìì
       if (playerState.isDisconnected) {
-        // 아직 제거되지 않은 플레이어인 경우 제거
+        // ìì§ ì ê±°ëì§ ìì íë ì´ì´ì¸ ê²½ì° ì ê±°
         if (this.otherPlayers.has(playerId) && !this.disconnectedPlayers.has(playerId)) {
           console.log(`Player ${playerId} is marked as disconnected, removing`);
           this.handlePlayerDisconnected({ playerId, timestamp: Date.now() });
@@ -1141,9 +1141,9 @@ export class GameScene extends Phaser.Scene {
           }
           
           // Health update logic - MODIFIED TO HANDLE RESPAWNS
-          // 상태 업데이트 로직 강화: isDead 플래그가 있는지 확인
+          // ìí ìë°ì´í¸ ë¡ì§ ê°í: isDead íëê·¸ê° ìëì§ íì¸
           if (playerState.isDead) {
-            // 상태에 isDead가 true인 경우 비활성화하고 deadPlayers에 추가
+            // ìíì isDeadê° trueì¸ ê²½ì° ë¹íì±ííê³  deadPlayersì ì¶ê°
             player.setHealth(0);
             this.deadPlayers.add(playerId);
           } else if (this.deadPlayers.has(playerId) && !playerState.forceRemoveFromDeadPlayers) {
@@ -1191,7 +1191,7 @@ export class GameScene extends Phaser.Scene {
             }
           }
         } else {
-          // 연결이 끊어진 플레이어는 재생성하지 않음
+          // ì°ê²°ì´ ëì´ì§ íë ì´ì´ë ì¬ìì±íì§ ìì
           if (this.disconnectedPlayers.has(playerId)) {
             console.log(`Not recreating disconnected player: ${playerId}`);
             return;
@@ -1252,7 +1252,7 @@ export class GameScene extends Phaser.Scene {
     
     // Remove players that are no longer in the room
     this.otherPlayers.forEach((player, id) => {
-      // 플레이어가 현재 상태 목록에 없고, 연결 끊김 목록에도 없으면 제거
+      // íë ì´ì´ê° íì¬ ìí ëª©ë¡ì ìê³ , ì°ê²° ëê¹ ëª©ë¡ìë ìì¼ë©´ ì ê±°
       if (!currentPlayerIds.has(id) && !this.disconnectedPlayers.has(id)) {
         // Free up the color index when a player leaves
         const colorIndex = this.hashCode(id) % 8 + 1;

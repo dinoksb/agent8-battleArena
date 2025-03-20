@@ -1,4 +1,5 @@
 class Server {
+	test(){}
   async joinRoom(roomId) {
     if (roomId) {
       if (await $global.countRoomUsers(roomId) >= 8) throw Error('room is full');
@@ -25,7 +26,7 @@ class Server {
       isRespawned: false,
       isDead: false,
       lastDeathTime: 0,
-      isDisconnected: false // 명시적으로 연결 상태 설정
+      isDisconnected: false // ëªìì ì¼ë¡ ì°ê²° ìí ì¤ì 
     });
 
     return joinedRoomId;
@@ -33,7 +34,7 @@ class Server {
 
   async leaveRoom() {
     try {
-      // 방을 떠나기 전에 이 플레이어가 떠난다는 것을 모든 클라이언트에게 알림
+      // ë°©ì ë ëê¸° ì ì ì´ íë ì´ì´ê° ë ëë¤ë ê²ì ëª¨ë  í´ë¼ì´ì¸í¸ìê² ìë¦¼
       await $room.broadcastToRoom('playerDisconnected', {
         playerId: $sender.account,
         timestamp: Date.now()
@@ -72,18 +73,18 @@ class Server {
   }
 
   async playerAttack(data) {
-    // 프로젝트 공격 처리
+    // íë¡ì í¸ ê³µê²© ì²ë¦¬
     if (data.type === "projectile") {
       await $room.broadcastToRoom('projectileFired', data);
     } else {
-      // 일반 공격이나 다른 종류의 공격 처리 (확장 포인트)
+      // ì¼ë° ê³µê²©ì´ë ë¤ë¥¸ ì¢ë¥ì ê³µê²© ì²ë¦¬ (íì¥ í¬ì¸í¸)
       await $room.broadcastToRoom('playerAttack', data);
     }
   }
 
-  // 새로운 메서드: 총알 제거 이벤트를 모든 클라이언트에 브로드캐스트
+  // ìë¡ì´ ë©ìë: ì´ì ì ê±° ì´ë²¤í¸ë¥¼ ëª¨ë  í´ë¼ì´ì¸í¸ì ë¸ë¡ëìºì¤í¸
   async projectileDestroyed(data) {
-    // 방 내 모든 클라이언트에게 총알 제거 이벤트 브로드캐스트
+    // ë°© ë´ ëª¨ë  í´ë¼ì´ì¸í¸ìê² ì´ì ì ê±° ì´ë²¤í¸ ë¸ë¡ëìºì¤í¸
     await $room.broadcastToRoom('projectileDestroyed', data);
   }
 
@@ -121,7 +122,7 @@ class Server {
       newHealth,
       timestamp,
       isDead: isDead,
-      projectileId  // 추가: 총알 ID를 포함하여 클라이언트가 해당 총알을 제거할 수 있도록 함
+      projectileId  // ì¶ê°: ì´ì IDë¥¼ í¬í¨íì¬ í´ë¼ì´ì¸í¸ê° í´ë¹ ì´ìì ì ê±°í  ì ìëë¡ í¨
     });
     
     // Check if player died (health reached 0)
@@ -192,14 +193,14 @@ class Server {
     // Update player state with complete data
     await $room.updateMyState(completePlayerState);
     
-    // 다른 플레이어에게 부활했음을 알림
+    // ë¤ë¥¸ íë ì´ì´ìê² ë¶ííìì ìë¦¼
     await $room.broadcastToRoom('playerRespawned', {
       playerId: $sender.account,
       forceRemoveFromDeadPlayers: true,
       ...completePlayerState
     });
     
-    // 강제 상태 업데이트를 통해 동기화
+    // ê°ì  ìí ìë°ì´í¸ë¥¼ íµí´ ëê¸°í
     const allUserStates = await $room.getAllUserStates();
     await $room.broadcastToRoom('forceStateUpdate', {
       states: allUserStates,
@@ -208,35 +209,35 @@ class Server {
       timestamp: Date.now()
     });
     
-    // 다른 플레이어들에게 주기적으로 알림
+    // ë¤ë¥¸ íë ì´ì´ë¤ìê² ì£¼ê¸°ì ì¼ë¡ ìë¦¼
     this.scheduleRespawnReminders($sender.account, completePlayerState);
   }
   
-  // 플레이어 연결 끊김 확인 메서드 추가
+  // íë ì´ì´ ì°ê²° ëê¹ íì¸ ë©ìë ì¶ê°
   async checkDisconnectedPlayers(deltaMS, roomId) {
     try {
-      // 모든 유저 상태 가져오기
+      // ëª¨ë  ì ì  ìí ê°ì ¸ì¤ê¸°
       const allUserStates = await $room.getAllUserStates();
       
-      // 방의 현재 연결된 유저 목록 가져오기
+      // ë°©ì íì¬ ì°ê²°ë ì ì  ëª©ë¡ ê°ì ¸ì¤ê¸°
       const roomUsers = await $room.getRoomUserAccounts(roomId);
       const connectedUsers = new Set(roomUsers);
       
-      // 상태는 있지만 실제 방에 연결되어 있지 않은 유저 찾기
+      // ìíë ìì§ë§ ì¤ì  ë°©ì ì°ê²°ëì´ ìì§ ìì ì ì  ì°¾ê¸°
       for (const state of allUserStates) {
         const account = state.account;
         
-        // 상태는 있지만 실제 방에 없는 경우
+        // ìíë ìì§ë§ ì¤ì  ë°©ì ìë ê²½ì°
         if (account && !connectedUsers.has(account) && !state.isDisconnected) {
           console.log(`Found disconnected player ${account} that wasn't properly marked`);
           
-          // 연결 끊김 상태로 설정
+          // ì°ê²° ëê¹ ìíë¡ ì¤ì 
           await $room.updateUserState(account, {
             isDisconnected: true,
             health: 0
           });
           
-          // 모든 클라이언트에게 알림
+          // ëª¨ë  í´ë¼ì´ì¸í¸ìê² ìë¦¼
           await $room.broadcastToRoom('playerDisconnected', {
             playerId: account,
             timestamp: Date.now()
@@ -248,9 +249,9 @@ class Server {
     }
   }
   
-  // 부활한 플레이어 알림 함수 (클라이언트 싱크 문제 해결)
+  // ë¶íí íë ì´ì´ ìë¦¼ í¨ì (í´ë¼ì´ì¸í¸ ì±í¬ ë¬¸ì  í´ê²°)
   async scheduleRespawnReminders(playerId, playerState) {
-    // 첫번째 알림 (500ms)
+    // ì²«ë²ì§¸ ìë¦¼ (500ms)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -265,7 +266,7 @@ class Server {
       }
     }, 500);
     
-    // 두번째 알림 (1.5s)
+    // ëë²ì§¸ ìë¦¼ (1.5s)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -280,7 +281,7 @@ class Server {
       }
     }, 1500);
     
-    // 세번째 알림 (3s)
+    // ì¸ë²ì§¸ ìë¦¼ (3s)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -338,7 +339,7 @@ class Server {
     this.updateGameState(deltaMS, roomId);
     this.checkRespawnedPlayers(deltaMS, roomId);
     
-    // 주기적으로 연결 끊긴 플레이어 확인 (10초마다)
+    // ì£¼ê¸°ì ì¼ë¡ ì°ê²° ëê¸´ íë ì´ì´ íì¸ (10ì´ë§ë¤)
     if (Date.now() % 10000 < deltaMS) {
       this.checkDisconnectedPlayers(deltaMS, roomId);
     }
