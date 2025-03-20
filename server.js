@@ -23,7 +23,8 @@ class Server {
       score: 0,
       health: 100,
       isRespawned: false,
-      isDead: false
+      isDead: false,
+      lastDeathTime: 0
     });
 
     return joinedRoomId;
@@ -64,11 +65,11 @@ class Server {
   }
 
   async playerAttack(data) {
-    // Ã­Â¬Ã¬Â¬Ã¬Â²Â´ ÃªÂ³ÂµÃªÂ²Â© Ã­Ã¬ Ã¬Â²Ã«Â¦Â¬
+    // 프로젝틸 공격 처리
     if (data.type === "projectile") {
       await $room.broadcastToRoom('projectileFired', data);
     } else {
-      // Ã¬Â´Ã¬  Ã«Â°Â©Ã¬Ã¬ ÃªÂ³ÂµÃªÂ²Â© Ã¬Â²Ã«Â¦Â¬ Ã¬ Ã¬Â§ (Ã­Ã¬ Ã­Â¸Ã­Ã¬Â±)
+      // 일반 공격이나 다른 종류의 공격 처리 (확장 포인트)
       await $room.broadcastToRoom('playerAttack', data);
     }
   }
@@ -83,11 +84,20 @@ class Server {
     // Calculate new health
     const newHealth = Math.max(0, currentHealth - damage);
     
+    // Skip processing if the player is already dead or has just respawned recently
+    const lastDeathTime = targetState.lastDeathTime || 0;
+    const now = Date.now();
+    if (targetState.isDead && now - lastDeathTime < 3000) {
+      console.log(`Ignoring hit for recently dead player ${targetId}`);
+      return;
+    }
+    
     // Update target health
+    const isDead = newHealth <= 0;
     await $room.updateUserState(targetId, { 
       health: newHealth,
-      // Ã«Â§Ã¬Â½ Ã¬Â²Â´Ã« Â¥Ã¬Â´ 0Ã¬Â´Ã«Â©Â´ isDead Ã­Ã«ÃªÂ·Â¸Ã«Â¥Â¼ Ã¬Â¤Ã¬ 
-      isDead: newHealth <= 0 
+      isDead: isDead,
+      lastDeathTime: isDead ? now : targetState.lastDeathTime
     });
     
     // Broadcast hit to all players in room
@@ -97,12 +107,11 @@ class Server {
       damage,
       newHealth,
       timestamp,
-      // Ã¬Â²Â´Ã« Â¥Ã¬Â´ 0Ã¬Â´Ã«Â©Â´ Ã­Ã« Ã¬Â¤Ã­ Ã¬Â£Â½Ã¬ Ã¬Ã­ Ã¬ Ã­
-      isDead: newHealth <= 0
+      isDead: isDead
     });
     
     // Check if player died (health reached 0)
-    if (newHealth <= 0) {
+    if (newHealth <= 0 && !targetState.isDead) {
       await this.playerDied({ playerId: targetId, killerId: attackerId });
     }
   }
@@ -120,18 +129,22 @@ class Server {
       await $room.updateUserState(killerId, { 
         score: currentScore + 1 
       });
+      
+      console.log(`Incremented score for player ${killerId} to ${currentScore + 1}`);
     }
     
-    // Mark player as dead in their state
+    // Mark player as dead in their state with timestamp
     await $room.updateUserState(playerId, {
       isDead: true,
-      health: 0
+      health: 0,
+      lastDeathTime: Date.now()
     });
     
     // Broadcast death event to all players
     await $room.broadcastToRoom('playerDied', {
       playerId,
-      killerId
+      killerId,
+      timestamp: Date.now()
     });
   }
 
@@ -159,21 +172,20 @@ class Server {
       flipX: false,
       score: currentState.score || 0,
       lastUpdate: Date.now(),
-      // Ã­Ã« Ã¬Â´Ã¬Â¸Ã­Â¸Ã¬ÃªÂ² deadPlayers Ã¬Â¸Ã­Â¸Ã¬Ã¬ Ã¬ ÃªÂ±Â°Ã­Ã«Â¼ÃªÂ³  Ã¬ Ã­Â¸ Ã«Â³Â´Ã«Â´ÃªÂ¸Â°
       forceRemoveFromDeadPlayers: true
     };
     
     // Update player state with complete data
     await $room.updateMyState(completePlayerState);
     
-    // Ã«Â¦Â¬Ã¬Â¤Ã­Â° Ã¬Â´Ã«Â²Â¤Ã­Â¸Ã¬ forceRemoveFromDeadPlayers Ã­Ã«ÃªÂ·Â¸ Ã¬Â¶ÃªÂ°
+    // 다른 플레이어에게 부활했음을 알림
     await $room.broadcastToRoom('playerRespawned', {
       playerId: $sender.account,
       forceRemoveFromDeadPlayers: true,
       ...completePlayerState
     });
     
-    // ÃªÂ°Ã¬  Ã¬Ã­ Ã¬Ã«Â°Ã¬Â´Ã­Â¸Ã¬Ã« Ã­Ã«ÃªÂ·Â¸ Ã¬Â¶ÃªÂ°
+    // 강제 상태 업데이트를 통해 필드 전달
     const allUserStates = await $room.getAllUserStates();
     await $room.broadcastToRoom('forceStateUpdate', {
       states: allUserStates,
@@ -182,13 +194,13 @@ class Server {
       timestamp: Date.now()
     });
     
-    // Ã«Â¦Â¬Ã¬Â¤Ã­Â° Ã¬Ã«Â¦Â¼Ã« Ã¬Â¤Ã¬Â¼Ã¬Â¤Ã«Â§
+    // 다른 플레이어들에게 주기적으로 알림
     this.scheduleRespawnReminders($sender.account, completePlayerState);
   }
   
-  // Ã«Â¦Â¬Ã¬Â¤Ã­Â° Ã¬Ã«Â¦Â¼ Ã­Â¨Ã¬ (Ã¬Â¤Ã«Â³Âµ Ã¬ Ã¬ Ã¬ ÃªÂ±Â°)
+  // 부활한 플레이어 알림 함수 (클라이언트 싱크 문제 해결)
   async scheduleRespawnReminders(playerId, playerState) {
-    // Ã¬Â²Â« Ã«Â²Ã¬Â§Â¸ Ã¬Ã«Â¦Â¼ (500ms)
+    // 첫번째 알림 (500ms)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -203,7 +215,7 @@ class Server {
       }
     }, 500);
     
-    // Ã« Ã«Â²Ã¬Â§Â¸ Ã¬Ã«Â¦Â¼ (1.5s)
+    // 두번째 알림 (1.5s)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -218,7 +230,7 @@ class Server {
       }
     }, 1500);
     
-    // Ã¬Â¸ Ã«Â²Ã¬Â§Â¸ Ã¬Ã«Â¦Â¼ (3s)
+    // 세번째 알림 (3s)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {

@@ -208,22 +208,22 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // Ã¬Â¶ÃªÂ°: Ã­Ã« Ã¬Â´Ã¬Â´ÃªÂ° Ã¬Â£Â½Ã¬ Ã¬Â´Ã«Â²Â¤Ã­Â¸ ÃªÂµÂ¬Ã«
+    // ÃÂ¬ÃÂ¶ÃÂªÃÂ°: ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂªÃÂ° ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ´ÃÂ«ÃÂ²ÃÂ¤ÃÂ­ÃÂ¸ ÃÂªÃÂµÃÂ¬ÃÂ«
     this.server.onRoomMessage(this.roomId, "playerDied", (data: any) => {
       const { playerId } = data;
       
-      // Ã«Â´ Ã¬ÂºÃ«Â¦Â­Ã­Â°ÃªÂ° Ã¬Â£Â½Ã¬Ã¬ Ã«Ã«Â§ Ã¬Â²Ã«Â¦Â¬
+      // ÃÂ«ÃÂ´ ÃÂ¬ÃÂºÃÂ«ÃÂ¦ÃÂ­ÃÂ­ÃÂ°ÃÂªÃÂ° ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ÃÂ¬ ÃÂ«ÃÂ«ÃÂ§ ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬
       if (playerId === this.myAccount) {
-        // Ã¬Â£Â½Ã¬ Ã¬Â´Ã«Â²Â¤Ã­Â¸ Ã«Â°Ã¬, UI Ã­Ã¬
+        // ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ´ÃÂ«ÃÂ²ÃÂ¤ÃÂ­ÃÂ¸ ÃÂ«ÃÂ°ÃÂ¬, UI ÃÂ­ÃÂ¬
         window.dispatchEvent(new CustomEvent('player-died'));
         
-        // deadPlayers Ã¬Â¸Ã­Â¸Ã¬ Ã¬Â¶ÃªÂ°
+        // deadPlayers ÃÂ¬ÃÂ¸ÃÂ­ÃÂ¸ÃÂ¬ ÃÂ¬ÃÂ¶ÃÂªÃÂ°
         this.deadPlayers.add(playerId);
       } else if (this.otherPlayers.has(playerId)) {
-        // Ã«Â¤Ã«Â¥Â¸ Ã­Ã« Ã¬Â´Ã¬Â´ÃªÂ° Ã¬Â£Â½Ã¬Ã¬ ÃªÂ²Â½Ã¬Â° deadPlayers Ã¬Â¸Ã­Â¸Ã¬ Ã¬Â¶ÃªÂ°
+        // ÃÂ«ÃÂ¤ÃÂ«ÃÂ¥ÃÂ¸ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂªÃÂ° ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ÃÂ¬ ÃÂªÃÂ²ÃÂ½ÃÂ¬ÃÂ° deadPlayers ÃÂ¬ÃÂ¸ÃÂ­ÃÂ¸ÃÂ¬ ÃÂ¬ÃÂ¶ÃÂªÃÂ°
         this.deadPlayers.add(playerId);
         
-        // Ã«Â¤Ã«Â¥Â¸ Ã­Ã« Ã¬Â´Ã¬Â´Ã¬ Ã¬ÂºÃ«Â¦Â­Ã­Â° Ã­Â¬Ã«ÂªÃ­ Ã¬Â²Ã«Â¦Â¬
+        // ÃÂ«ÃÂ¤ÃÂ«ÃÂ¥ÃÂ¸ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂ¬ ÃÂ¬ÃÂºÃÂ«ÃÂ¦ÃÂ­ÃÂ­ÃÂ° ÃÂ­ÃÂ¬ÃÂ«ÃÂªÃÂ­ ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬
         const player = this.otherPlayers.get(playerId);
         if (player) {
           player.setHealth(0);
@@ -483,7 +483,7 @@ export class GameScene extends Phaser.Scene {
       // Update our health to match server's value
       this.player.setHealth(newHealth);
       
-      // Ã«Â¡Ã¬Â»Â¬ Ã­Ã« Ã¬Â´Ã¬Â´ÃªÂ° Ã«Â§Ã¬Ã¬ Ã«Ã«Â§ Ã¬Â¹Â´Ã«Â©Ã«Â¼ Ã­Ã«Â¤Ã«Â¦Â¼ Ã­Â¨ÃªÂ³Â¼ Ã¬ Ã¬Â©
+      // ÃÂ«ÃÂ¡ÃÂ¬ÃÂ»ÃÂ¬ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂªÃÂ° ÃÂ«ÃÂ§ÃÂ¬ÃÂ¬ ÃÂ«ÃÂ«ÃÂ§ ÃÂ¬ÃÂ¹ÃÂ´ÃÂ«ÃÂ©ÃÂ«ÃÂ¼ ÃÂ­ÃÂ«ÃÂ¤ÃÂ«ÃÂ¦ÃÂ¼ ÃÂ­ÃÂ¨ÃÂªÃÂ³ÃÂ¼ ÃÂ¬ ÃÂ¬ÃÂ©
       this.cameras.main.shake(100, 0.01);
       
       // Check if player died
@@ -604,7 +604,7 @@ export class GameScene extends Phaser.Scene {
     
     console.log(`Player respawned: ${playerId}, forceRemoveFromDeadPlayers: ${forceRemoveFromDeadPlayers}`);
     
-    // Ã«Â´ Ã¬ÂºÃ«Â¦Â­Ã­Â°Ã¬Â¸ ÃªÂ²Â½Ã¬Â° Ã¬Â²Ã«Â¦Â¬Ã­Ã¬Â§ Ã¬Ã¬ (Ã«Â¡Ã¬Â»Â¬Ã¬Ã¬ Ã¬Â´Ã«Â¯Â¸ Ã¬Â²Ã«Â¦Â¬Ã«Â¨)
+    // ÃÂ«ÃÂ´ ÃÂ¬ÃÂºÃÂ«ÃÂ¦ÃÂ­ÃÂ­ÃÂ°ÃÂ¬ÃÂ¸ ÃÂªÃÂ²ÃÂ½ÃÂ¬ÃÂ° ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬ÃÂ­ÃÂ¬ÃÂ§ ÃÂ¬ÃÂ¬ (ÃÂ«ÃÂ¡ÃÂ¬ÃÂ»ÃÂ¬ÃÂ¬ÃÂ¬ ÃÂ¬ÃÂ´ÃÂ«ÃÂ¯ÃÂ¸ ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬ÃÂ«ÃÂ¨)
     if (playerId === this.myAccount) return;
     
     // Force remove from deadPlayers set if flag is present
@@ -683,11 +683,11 @@ export class GameScene extends Phaser.Scene {
       this.deadPlayers.delete(respawnedPlayerId);
       console.log(`Removed player ${respawnedPlayerId} from deadPlayers set due to force state update`);
     } else if (forceRemoveFromDeadPlayers) {
-      // Ã«ÂªÂ¨Ã«  Ã­Ã« Ã¬Â´Ã¬Â´Ã¬ Ã«Ã­Â´ forceRemoveFromDeadPlayersÃªÂ° trueÃ¬Â¸ ÃªÂ²Â½Ã¬Â°
-      // Ã«Â¦Â¬Ã¬Â¤Ã­Â°Ã« Ã­Ã« Ã¬Â´Ã¬Â´Ã«Â¤Ã¬ deadPlayers Ã¬Â¸Ã­Â¸Ã¬Ã¬ Ã¬ ÃªÂ±Â°
+      // ÃÂ«ÃÂªÃÂ¨ÃÂ«  ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂ¬ ÃÂ«ÃÂ­ÃÂ´ forceRemoveFromDeadPlayersÃÂªÃÂ° trueÃÂ¬ÃÂ¸ ÃÂªÃÂ²ÃÂ½ÃÂ¬ÃÂ°
+      // ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂ¤ÃÂ­ÃÂ°ÃÂ« ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂ«ÃÂ¤ÃÂ¬ deadPlayers ÃÂ¬ÃÂ¸ÃÂ­ÃÂ¸ÃÂ¬ÃÂ¬ ÃÂ¬ ÃÂªÃÂ±ÃÂ°
       if (states) {
         states.forEach((state: any) => {
-          // Ã¬Â²Â´Ã« Â¥Ã¬Â´ Ã¬ÃªÂ³  Ã«Â¦Â¬Ã¬Â¤Ã­Â° Ã­Ã«ÃªÂ·Â¸ÃªÂ° trueÃ¬Â¸ Ã­Ã« Ã¬Â´Ã¬Â´Ã«Â¤Ã¬ deadPlayersÃ¬Ã¬ Ã¬ ÃªÂ±Â°
+          // ÃÂ¬ÃÂ²ÃÂ´ÃÂ« ÃÂ¥ÃÂ¬ÃÂ´ ÃÂ¬ÃÂªÃÂ³  ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂ¤ÃÂ­ÃÂ° ÃÂ­ÃÂ«ÃÂªÃÂ·ÃÂ¸ÃÂªÃÂ° trueÃÂ¬ÃÂ¸ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂ«ÃÂ¤ÃÂ¬ deadPlayersÃÂ¬ÃÂ¬ ÃÂ¬ ÃÂªÃÂ±ÃÂ°
           if (state.health > 0 && (state.isRespawned || state.forceRemoveFromDeadPlayers)) {
             this.deadPlayers.delete(state.account);
           }
@@ -716,7 +716,7 @@ export class GameScene extends Phaser.Scene {
       console.log(`Local player hit. Current health: ${this.player.health}`);
       this.player.damage(damage);
       
-      // Ã«Â¡Ã¬Â»Â¬ Ã­Ã« Ã¬Â´Ã¬Â´ÃªÂ° Ã«Â§Ã¬Ã¬ Ã«Ã«Â§ Ã¬Â¹Â´Ã«Â©Ã«Â¼ Ã­Ã«Â¤Ã«Â¦Â¼ Ã­Â¨ÃªÂ³Â¼ Ã¬ Ã¬Â©
+      // ÃÂ«ÃÂ¡ÃÂ¬ÃÂ»ÃÂ¬ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂªÃÂ° ÃÂ«ÃÂ§ÃÂ¬ÃÂ¬ ÃÂ«ÃÂ«ÃÂ§ ÃÂ¬ÃÂ¹ÃÂ´ÃÂ«ÃÂ©ÃÂ«ÃÂ¼ ÃÂ­ÃÂ«ÃÂ¤ÃÂ«ÃÂ¦ÃÂ¼ ÃÂ­ÃÂ¨ÃÂªÃÂ³ÃÂ¼ ÃÂ¬ ÃÂ¬ÃÂ©
       this.cameras.main.shake(100, 0.01);
       
       const newHealth = this.player.health;
@@ -825,7 +825,7 @@ export class GameScene extends Phaser.Scene {
       name: this.playerName,
       animation: currentAnimation,
       flipX: this.player.sprite.flipX,
-      // Ã¬Â£Â½Ã¬ Ã¬Ã­Ã« Ã­Â¨ÃªÂ» Ã¬ Ã¬Â¡
+      // ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ­ÃÂ« ÃÂ­ÃÂ¨ÃÂªÃÂ» ÃÂ¬ ÃÂ¬ÃÂ¡
       isDead: this.player.isDead()
     };
     
@@ -929,9 +929,9 @@ export class GameScene extends Phaser.Scene {
           }
           
           // Health update logic - MODIFIED TO HANDLE RESPAWNS
-          // Ã¬Ã«Â²ÃªÂ° Ã«ÂªÃ¬Ã¬  Ã¬ Ã«Â³Â´Ã«Â¥Â¼ Ã«Â°Ã¬: Ã«ÂªÃ¬Ã¬ Ã¬Â¸ isDead Ã­Ã«ÃªÂ·Â¸ÃªÂ° Ã¬Ã«Ã¬Â§ Ã­Ã¬Â¸
+          // ÃÂ¬ÃÂ«ÃÂ²ÃÂªÃÂ° ÃÂ«ÃÂªÃÂ¬ÃÂ¬  ÃÂ¬ ÃÂ«ÃÂ³ÃÂ´ÃÂ«ÃÂ¥ÃÂ¼ ÃÂ«ÃÂ°ÃÂ¬: ÃÂ«ÃÂªÃÂ¬ÃÂ¬ ÃÂ¬ÃÂ¸ isDead ÃÂ­ÃÂ«ÃÂªÃÂ·ÃÂ¸ÃÂªÃÂ° ÃÂ¬ÃÂ«ÃÂ¬ÃÂ§ ÃÂ­ÃÂ¬ÃÂ¸
           if (playerState.isDead) {
-            // Ã¬Ã«Â²Ã¬Ã¬ Ã¬Â£Â½Ã¬ Ã¬Ã­Ã«Â¼ÃªÂ³  Ã«Â³Â´Ã«Â´Ã«Â©Â´ Ã«Â¬Â´Ã¬Â¡Â°ÃªÂ±Â´ Ã¬Â£Â½Ã¬ Ã¬Ã­Ã«Â¡ Ã¬Â²Ã«Â¦Â¬
+            // ÃÂ¬ÃÂ«ÃÂ²ÃÂ¬ÃÂ¬ ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ­ÃÂ«ÃÂ¼ÃÂªÃÂ³  ÃÂ«ÃÂ³ÃÂ´ÃÂ«ÃÂ´ÃÂ«ÃÂ©ÃÂ´ ÃÂ«ÃÂ¬ÃÂ´ÃÂ¬ÃÂ¡ÃÂ°ÃÂªÃÂ±ÃÂ´ ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ­ÃÂ«ÃÂ¡ ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬
             player.setHealth(0);
             this.deadPlayers.add(playerId);
           } else if (this.deadPlayers.has(playerId) && !playerState.forceRemoveFromDeadPlayers) {
