@@ -1,0 +1,18 @@
+{
+  "images": {
+    "projectile": {
+      "url": "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/sprites/bullets/bullet7.png",
+      "description": "Projectile image for player attacks"
+    },
+    "bullet-impact": {
+      "url": "https://agent8-games.verse8.io/assets/2D/vampire_survival_riped_asset/projectile/arrow.png",
+      "description": "Arrow projectile image used for ranged attacks in the game"
+    }
+  },
+  "sounds": {
+    "shoot": {
+      "url": "https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/audio/SoundEffects/weapons/pistol.wav",
+      "description": "Sound effect for shooting projectiles"
+    }
+  }
+}
