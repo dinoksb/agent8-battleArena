@@ -45,6 +45,9 @@ export class GameScene extends Phaser.Scene {
   // 총알 제거 요청 추적을 위한 변수 추가
   private projectileDestroyRequests: Set<string> = new Set();
   
+  // 연결 끊긴 플레이어 추적
+  private disconnectedPlayers: Set<string> = new Set();
+  
   constructor() {
     super({ key: "GameScene" });
   }
@@ -176,6 +179,9 @@ export class GameScene extends Phaser.Scene {
     // 총알 제거 이벤트 구독 추가
     this.server.onRoomMessage(this.roomId, "projectileDestroyed", this.handleProjectileDestroyed.bind(this));
     
+    // 플레이어 연결 끊김 이벤트 구독 추가
+    this.server.onRoomMessage(this.roomId, "playerDisconnected", this.handlePlayerDisconnected.bind(this));
+    
     // Subscribe to room state for obstacles
     this.server.subscribeRoomState(this.roomId, (state: any) => {
       if (state && state.obstacles && !this.obstaclesCreated) {
@@ -213,8 +219,15 @@ export class GameScene extends Phaser.Scene {
         this.updatePlayerStates(states);
       }
     });
+    
+    // 유저 퇴장 이벤트 구독
+    this.server.onRoomUserLeave(this.roomId, (account: string) => {
+      // 유저가 방을 떠나면 해당 플레이어를 연결 끊김 처리
+      console.log(`Player left room: ${account}`);
+      this.handlePlayerDisconnected({ playerId: account, timestamp: Date.now() });
+    });
 
-    // 주석: 플레이어 사망 이벤트 구독
+    // 주석: 플레이어    // 주석: 플레이어 사망 이벤트 구독
     this.server.onRoomMessage(this.roomId, "playerDied", (data: any) => {
       const { playerId } = data;
       
@@ -236,6 +249,39 @@ export class GameScene extends Phaser.Scene {
         }
       }
     });
+  }
+  
+  // 플레이어 연결 끊김 핸들러 추가
+  private handlePlayerDisconnected(data: any) {
+    const { playerId, timestamp } = data;
+    
+    console.log(`Player disconnected: ${playerId}`);
+    
+    // 연결 끊긴 플레이어 목록에 추가
+    this.disconnectedPlayers.add(playerId);
+    
+    // 해당 플레이어 객체가 존재하면 제거
+    if (this.otherPlayers.has(playerId)) {
+      const player = this.otherPlayers.get(playerId);
+      
+      // 플레이어 캐릭터 객체 제거
+      if (player) {
+        player.destroy();
+      }
+      
+      // 다른 데이터 구조에서도 플레이어 정보 제거
+      this.otherPlayers.delete(playerId);
+      this.damagedPlayers.delete(playerId);
+      this.damageTimestamps.delete(playerId);
+      this.playerAnimations.delete(playerId);
+      this.deadPlayers.delete(playerId);
+      
+      // 색상 인덱스 해제
+      const colorIndex = this.hashCode(playerId) % 8 + 1;
+      this.usedColorIndices.delete(colorIndex);
+      
+      console.log(`Removed disconnected player: ${playerId}`);
+    }
   }
 
   update(time: number, delta: number) {
@@ -473,6 +519,12 @@ export class GameScene extends Phaser.Scene {
     // Don't create projectiles fired by this player (already created locally)
     if (data.ownerId === this.myAccount) return;
     
+    // 연결 끊긴 플레이어의 총알은 생성하지 않음
+    if (this.disconnectedPlayers.has(data.ownerId)) {
+      console.log(`Ignoring projectile from disconnected player: ${data.ownerId}`);
+      return;
+    }
+    
     try {
       this.createProjectile(data);
     } catch (error) {
@@ -501,6 +553,12 @@ export class GameScene extends Phaser.Scene {
     
     // 이미 제거 요청된 총알이면 생성하지 않음
     if (this.projectileDestroyRequests.has(id)) {
+      return null;
+    }
+    
+    // 연결 끊긴 플레이어의 총알은 생성하지 않음
+    if (this.disconnectedPlayers.has(ownerId)) {
+      console.log(`Not creating projectile from disconnected player: ${ownerId}`);
       return null;
     }
     
@@ -558,6 +616,12 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerHitSync(data: any) {
     const { targetId, attackerId, damage, newHealth, timestamp, forceRemoveFromDeadPlayers, isDead, projectileId } = data;
     
+    // 연결 끊긴 플레이어의 피격 이벤트는 무시
+    if (this.disconnectedPlayers.has(targetId)) {
+      console.log(`Ignoring hit sync for disconnected player: ${targetId}`);
+      return;
+    }
+    
     // 만약 projectileId가 존재하면 해당 총알 제거
     if (projectileId && this.projectiles.has(projectileId)) {
       this.destroyProjectile(projectileId, false);
@@ -614,6 +678,11 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerAnimation(data: any) {
     const { playerId, animation, flipX, forceRemoveFromDeadPlayers } = data;
     
+    // 연결 끊긴 플레이어의 애니메이션 이벤트는 무시
+    if (this.disconnectedPlayers.has(playerId)) {
+      return;
+    }
+    
     // Check if we need to force remove from deadPlayers set
     if (forceRemoveFromDeadPlayers && playerId) {
       this.deadPlayers.delete(playerId);
@@ -651,6 +720,11 @@ export class GameScene extends Phaser.Scene {
   
   // Handle player attack message from server
   private handlePlayerAttack(data: any) {
+    // 연결 끊긴 플레이어의 공격 이벤트는 무시
+    if (this.disconnectedPlayers.has(data.ownerId)) {
+      return;
+    }
+    
     // Check for type field - if it's a projectile, handle it differently
     if (data.type === "projectile") {
       this.handleProjectileFired(data);
@@ -694,6 +768,11 @@ export class GameScene extends Phaser.Scene {
   private handlePlayerRespawned(data: any) {
     const { playerId, x, y, health, forceRemoveFromDeadPlayers } = data;
     
+    // 연결 끊긴 플레이어의 부활 이벤트는 무시
+    if (this.disconnectedPlayers.has(playerId)) {
+      return;
+    }
+    
     console.log(`Player respawned: ${playerId}, forceRemoveFromDeadPlayers: ${forceRemoveFromDeadPlayers}`);
     
     // 자신의 부활은 로컬에서 처리하므로 무시
@@ -730,6 +809,11 @@ export class GameScene extends Phaser.Scene {
   // Handle player respawn reminder event
   private handlePlayerRespawnReminder(data: any) {
     const { playerId, playerState, forceRemoveFromDeadPlayers } = data;
+    
+    // 연결 끊긴 플레이어의 부활 알림 이벤트는 무시
+    if (this.disconnectedPlayers.has(playerId)) {
+      return;
+    }
     
     console.log(`Respawn reminder for player: ${playerId}, forceRemoveFromDeadPlayers: ${forceRemoveFromDeadPlayers}`);
     
@@ -795,6 +879,12 @@ export class GameScene extends Phaser.Scene {
 
   private handlePlayerHit(targetId: string, attackerId: string, projectileId: string) {
     console.log(`Player hit: targetId=${targetId}, attackerId=${attackerId}, projectileId=${projectileId}`);
+    
+    // 연결 끊긴 플레이어에 대한 히트는 무시
+    if (this.disconnectedPlayers.has(targetId)) {
+      console.log(`Ignoring hit for disconnected player: ${targetId}`);
+      return;
+    }
     
     // Skip if target player is dead
     if (targetId === this.myAccount && this.player.isDead()) return;
@@ -884,6 +974,7 @@ export class GameScene extends Phaser.Scene {
     this.player.sprite.setPosition(x, y);
     
     // Reset player state
+    this.player    // Reset player state
     this.player.reset();
     
     // Remove from dead players set
@@ -918,7 +1009,7 @@ export class GameScene extends Phaser.Scene {
       name: this.playerName,
       animation: currentAnimation,
       flipX: this.player.sprite.flipX,
-      // 사망 여부 정보도 추가
+      isDisconnected: false, // 명시적으로 연결 상태 설정
       isDead: this.player.isDead()
     };
     
@@ -983,11 +1074,24 @@ export class GameScene extends Phaser.Scene {
   updatePlayerStates(playerStates: any[]) {
     if (!playerStates) return;
     
+    // 현재 방에 있는 플레이어 ID 추적
+    const currentPlayerIds = new Set(playerStates.map(p => p.account));
+    
     playerStates.forEach(playerState => {
       const playerId = playerState.account;
       
       // Skip our own player (we handle our own state)
       if (playerId === this.myAccount) return;
+      
+      // 연결이 끊어진 플레이어는 처리하지 않음
+      if (playerState.isDisconnected) {
+        // 아직 제거되지 않은 플레이어인 경우 제거
+        if (this.otherPlayers.has(playerId) && !this.disconnectedPlayers.has(playerId)) {
+          console.log(`Player ${playerId} is marked as disconnected, removing`);
+          this.handlePlayerDisconnected({ playerId, timestamp: Date.now() });
+        }
+        return;
+      }
       
       // Check if we need to force remove from deadPlayers set
       if (playerState.forceRemoveFromDeadPlayers) {
@@ -1043,7 +1147,7 @@ export class GameScene extends Phaser.Scene {
             if (playerState.health > 0 && this.deadPlayers.has(playerId)) {
               console.log(`Player ${playerId} has respawned, resetting state`);
               this.deadPlayers.delete(playerId);
-                            player.reset();
+              player.reset();
             }
             
             // If we have a recent local damage value (within last 2 seconds), use it
@@ -1072,6 +1176,12 @@ export class GameScene extends Phaser.Scene {
             }
           }
         } else {
+          // 연결이 끊어진 플레이어는 재생성하지 않음
+          if (this.disconnectedPlayers.has(playerId)) {
+            console.log(`Not recreating disconnected player: ${playerId}`);
+            return;
+          }
+          
           // Get a unique color index for this player
           const colorIndex = this.getUniqueColorIndex(playerId);
           
@@ -1126,9 +1236,9 @@ export class GameScene extends Phaser.Scene {
     });
     
     // Remove players that are no longer in the room
-    const currentPlayerIds = new Set(playerStates.map(p => p.account));
     this.otherPlayers.forEach((player, id) => {
-      if (!currentPlayerIds.has(id)) {
+      // 플레이어가 현재 상태 목록에 없고, 연결 끊김 목록에도 없으면 제거
+      if (!currentPlayerIds.has(id) && !this.disconnectedPlayers.has(id)) {
         // Free up the color index when a player leaves
         const colorIndex = this.hashCode(id) % 8 + 1;
         this.usedColorIndices.delete(colorIndex);
@@ -1141,6 +1251,8 @@ export class GameScene extends Phaser.Scene {
         
         player.destroy();
         this.otherPlayers.delete(id);
+        
+        console.log(`Removed player not in current state: ${id}`);
       }
     });
   }

@@ -24,7 +24,8 @@ class Server {
       health: 100,
       isRespawned: false,
       isDead: false,
-      lastDeathTime: 0
+      lastDeathTime: 0,
+      isDisconnected: false // 명시적으로 연결 상태 설정
     });
 
     return joinedRoomId;
@@ -32,6 +33,12 @@ class Server {
 
   async leaveRoom() {
     try {
+      // 방을 떠나기 전에 이 플레이어가 떠난다는 것을 모든 클라이언트에게 알림
+      await $room.broadcastToRoom('playerDisconnected', {
+        playerId: $sender.account,
+        timestamp: Date.now()
+      });
+      
       // Before leaving, clean up player data by setting health to 0
       // This ensures the player appears dead/inactive in any UI lists
       await $room.updateMyState({
@@ -205,6 +212,42 @@ class Server {
     this.scheduleRespawnReminders($sender.account, completePlayerState);
   }
   
+  // 플레이어 연결 끊김 확인 메서드 추가
+  async checkDisconnectedPlayers(deltaMS, roomId) {
+    try {
+      // 모든 유저 상태 가져오기
+      const allUserStates = await $room.getAllUserStates();
+      
+      // 방의 현재 연결된 유저 목록 가져오기
+      const roomUsers = await $room.getRoomUserAccounts(roomId);
+      const connectedUsers = new Set(roomUsers);
+      
+      // 상태는 있지만 실제 방에 연결되어 있지 않은 유저 찾기
+      for (const state of allUserStates) {
+        const account = state.account;
+        
+        // 상태는 있지만 실제 방에 없는 경우
+        if (account && !connectedUsers.has(account) && !state.isDisconnected) {
+          console.log(`Found disconnected player ${account} that wasn't properly marked`);
+          
+          // 연결 끊김 상태로 설정
+          await $room.updateUserState(account, {
+            isDisconnected: true,
+            health: 0
+          });
+          
+          // 모든 클라이언트에게 알림
+          await $room.broadcastToRoom('playerDisconnected', {
+            playerId: account,
+            timestamp: Date.now()
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error checking disconnected players:", error);
+    }
+  }
+  
   // 부활한 플레이어 알림 함수 (클라이언트 싱크 문제 해결)
   async scheduleRespawnReminders(playerId, playerState) {
     // 첫번째 알림 (500ms)
@@ -294,6 +337,11 @@ class Server {
   $roomTick(deltaMS, roomId) {
     this.updateGameState(deltaMS, roomId);
     this.checkRespawnedPlayers(deltaMS, roomId);
+    
+    // 주기적으로 연결 끊긴 플레이어 확인 (10초마다)
+    if (Date.now() % 10000 < deltaMS) {
+      this.checkDisconnectedPlayers(deltaMS, roomId);
+    }
   }
   
   // Update game state (time, etc.)
