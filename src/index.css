@@ -32,6 +32,7 @@ canvas {
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* Set all elements inside game container to center */
@@ -39,4 +40,12 @@ canvas {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 840px) {
+  .phaser-canvas {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
 }

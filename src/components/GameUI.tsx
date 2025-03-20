@@ -21,14 +21,14 @@ const GameUI: React.FC<GameUIProps> = ({ roomId, onExitGame }) => {
       {/* Room info */}
       <div className="flex space-x-4">
         <div className="bg-gray-900 bg-opacity-75 p-2 rounded-md">
-          <p className="text-sm">Room: {roomId}</p>
+          <p className="text-sm font-medium">Room: {roomId}</p>
         </div>
         <div className="bg-gray-900 bg-opacity-75 p-2 rounded-md">
-          <p className="text-sm">Players: {roomState?.$users?.length || 0}/8</p>
+          <p className="text-sm font-medium">Players: {roomState?.$users?.length || 0}/8</p>
         </div>
         {roomState?.gameTime && (
           <div className="bg-gray-900 bg-opacity-75 p-2 rounded-md">
-            <p className="text-sm">Time: {Math.floor(roomState.gameTime / 1000)}s</p>
+            <p className="text-sm font-medium">Time: {Math.floor(roomState.gameTime / 1000)}s</p>
           </div>
         )}
       </div>
@@ -38,9 +38,12 @@ const GameUI: React.FC<GameUIProps> = ({ roomId, onExitGame }) => {
         <h3 className="text-sm font-bold mb-1">Scoreboard</h3>
         <div className="flex flex-wrap gap-2 max-w-md">
           {sortedPlayers.map((player, index) => (
-            <div key={player.account} className="flex justify-between text-xs bg-gray-800 px-2 py-1 rounded">
-              <span>{index + 1}. {player.name || player.account}</span>
-              <span className="ml-2">{player.score || 0}</span>
+            <div 
+              key={player.account} 
+              className="flex justify-between text-xs bg-gray-800 px-2 py-1 rounded"
+            >
+              <span>{index + 1}. {player.name || player.account.substring(0, 6)}</span>
+              <span className="ml-2 font-bold">{player.score || 0}</span>
             </div>
           ))}
         </div>
@@ -49,7 +52,7 @@ const GameUI: React.FC<GameUIProps> = ({ roomId, onExitGame }) => {
       {/* Exit button */}
       <button
         onClick={onExitGame}
-        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm"
+        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
       >
         Exit
       </button>

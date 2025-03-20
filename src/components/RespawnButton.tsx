@@ -1,5 +1,4 @@
-import React from 'react';
-import { useGameServer } from "@agent8/gameserver";
+import React from "react";
 
 interface RespawnButtonProps {
   isVisible: boolean;
@@ -10,29 +9,15 @@ const RespawnButton: React.FC<RespawnButtonProps> = ({ isVisible, onRespawn }) =
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
-      <div className="text-center p-6 bg-gray-800 rounded-lg shadow-lg" style={{ width: '300px', margin: '0 auto' }}>
-        <h2 className="text-2xl font-bold text-red-500 mb-4">You Died!</h2>
-        <p className="text-white mb-6">Press the button below to respawn</p>
-        <div className="flex justify-center">
-          <button
-            onClick={onRespawn}
-            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors duration-200"
-            style={{
-              backgroundImage: `url(https://agent8-games.verse8.io/assets/2D/vampire_survival_riped_asset/ui/buttons/btn_red.png)`,
-              backgroundSize: 'cover',
-              backgroundRepeat: 'no-repeat',
-              width: '150px',
-              height: '50px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            Respawn
-          </button>
-        </div>
-      </div>
+    <div className="bg-black bg-opacity-70 p-6 rounded-lg text-center">
+      <h2 className="text-red-500 text-2xl font-bold mb-4">You Died!</h2>
+      <p className="text-white mb-4">Ready to get back in the game?</p>
+      <button
+        onClick={onRespawn}
+        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg text-lg font-bold transition-colors transform hover:scale-105"
+      >
+        Respawn
+      </button>
     </div>
   );
 };

@@ -61,7 +61,7 @@ const GameComponent: React.FC<GameComponentProps> = ({ playerName, roomId, onExi
 
     // Listen for player death event
     const handlePlayerDeath = () => {
-      console.log("ÃÂ­ÃÂÃÂÃÂ«ÃÂ ÃÂÃÂ¬ÃÂÃÂ´ÃÂ¬ÃÂÃÂ´ ÃÂ¬ÃÂÃÂ¬ÃÂ«ÃÂ§ÃÂ ÃÂ¬ÃÂÃÂ´ÃÂ«ÃÂ²ÃÂ¤ÃÂ­ÃÂÃÂ¸ ÃÂªÃÂ°ÃÂÃÂ¬ÃÂ§ÃÂ: UI ÃÂ­ÃÂÃÂÃÂ¬ÃÂÃÂ");
+      console.log("Player died: showing respawn UI");
       setIsPlayerDead(true);
     };
 
@@ -140,13 +140,13 @@ const GameComponent: React.FC<GameComponentProps> = ({ playerName, roomId, onExi
     
     const myPlayerState = allPlayers.find(player => player.account === server.account);
     if (myPlayerState) {
-      // isDead ÃÂ­ÃÂÃÂÃÂ«ÃÂÃÂÃÂªÃÂ·ÃÂ¸ ÃÂ«ÃÂÃÂÃÂ«ÃÂÃÂ health ÃÂªÃÂ°ÃÂÃÂ¬ÃÂÃÂ¼ÃÂ«ÃÂ¡ÃÂ ÃÂ¬ÃÂÃÂ¬ÃÂ«ÃÂ§ÃÂ ÃÂ¬ÃÂÃÂÃÂ­ÃÂÃÂ ÃÂ­ÃÂÃÂÃÂ¬ÃÂÃÂ¸
+      // Check both isDead flag and health value
       if ((myPlayerState.isDead === true) || (myPlayerState.health !== undefined && myPlayerState.health <= 0)) {
-        console.log("ÃÂ­ÃÂÃÂÃÂ«ÃÂ ÃÂÃÂ¬ÃÂÃÂ´ÃÂ¬ÃÂÃÂ´ ÃÂ¬ÃÂÃÂÃÂ­ÃÂÃÂÃÂªÃÂ°ÃÂ ÃÂ¬ÃÂÃÂ¬ÃÂ«ÃÂ§ÃÂÃÂ¬ÃÂÃÂ¼ÃÂ«ÃÂ¡ÃÂ ÃÂªÃÂ°ÃÂÃÂ¬ÃÂ§ÃÂÃÂ«ÃÂÃÂ¨: UI ÃÂ­ÃÂÃÂÃÂ¬ÃÂÃÂ");
+        console.log("Player state indicates death: showing respawn UI");
         setIsPlayerDead(true);
       } else if (myPlayerState.health > 0 && myPlayerState.isRespawned) {
-        // ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂÃÂ¤ÃÂ­ÃÂÃÂ° ÃÂ«ÃÂÃÂÃÂ¬ÃÂÃÂ ÃÂ«ÃÂÃÂ ÃÂ¬ÃÂÃÂ¬ÃÂ«ÃÂ§ÃÂ UI ÃÂ¬ÃÂ ÃÂÃÂªÃÂ±ÃÂ°
-        console.log("ÃÂ­ÃÂÃÂÃÂ«ÃÂ ÃÂÃÂ¬ÃÂÃÂ´ÃÂ¬ÃÂÃÂ´ÃÂªÃÂ°ÃÂ ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂÃÂ¤ÃÂ­ÃÂÃÂ°ÃÂ«ÃÂÃÂ¨: ÃÂ¬ÃÂÃÂ¬ÃÂ«ÃÂ§ÃÂ UI ÃÂ¬ÃÂ ÃÂÃÂªÃÂ±ÃÂ°");
+        // Player has been respawned, hide respawn UI
+        console.log("Player has respawned: hiding respawn UI");
         setIsPlayerDead(false);
       }
     }
@@ -156,7 +156,7 @@ const GameComponent: React.FC<GameComponentProps> = ({ playerName, roomId, onExi
   const handleRespawn = () => {
     if (!gameSceneRef.current || !server) return;
     
-    console.log("ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂÃÂ¤ÃÂ­ÃÂÃÂ° ÃÂ«ÃÂ²ÃÂÃÂ­ÃÂÃÂ¼ ÃÂ­ÃÂÃÂ´ÃÂ«ÃÂ¦ÃÂ­: ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂÃÂ¤ÃÂ­ÃÂÃÂ° ÃÂ¬ÃÂ²ÃÂÃÂ«ÃÂ¦ÃÂ¬ ÃÂ¬ÃÂÃÂÃÂ¬ÃÂÃÂ");
+    console.log("Respawn button clicked: initiating respawn process");
     
     // Generate random position within map boundaries
     const randomX = Math.floor(Math.random() * 1800) + 100; // 100 to 1900
@@ -171,25 +171,29 @@ const GameComponent: React.FC<GameComponentProps> = ({ playerName, roomId, onExi
     // Hide respawn button
     setIsPlayerDead(false);
     
-    console.log("ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂÃÂ¤ÃÂ­ÃÂÃÂ° ÃÂ¬ÃÂ²ÃÂÃÂ«ÃÂ¦ÃÂ¬ ÃÂ¬ÃÂÃÂÃÂ«ÃÂ£ÃÂ");
+    console.log("Respawn process completed");
   };
 
   return (
     <div className="flex flex-col w-full h-screen bg-gray-900">
       {/* Game UI - positioned at the top */}
-      <div className="w-full bg-gray-800 p-2 shadow-md z-10">
+      <div className="w-full bg-gray-800 bg-opacity-90 p-2 shadow-md z-10">
         <GameUI roomId={roomId} onExitGame={onExitGame} />
       </div>
       
       {/* Game canvas container - positioned in the center */}
-      <div className="flex-grow flex justify-center items-center">
-        <div className="relative w-[800px] h-[600px] shadow-lg rounded-lg overflow-hidden">
+      <div className="flex-grow flex justify-center items-center relative">
+        <div className="w-[800px] h-[600px] shadow-lg rounded-lg overflow-hidden">
           <div ref={gameRef} className="w-full h-full" />
         </div>
+        
+        {/* Respawn button overlay - positioned over the game canvas */}
+        {isPlayerDead && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <RespawnButton isVisible={true} onRespawn={handleRespawn} />
+          </div>
+        )}
       </div>
-      
-      {/* Respawn button overlay */}
-      <RespawnButton isVisible={isPlayerDead} onRespawn={handleRespawn} />
     </div>
   );
 };
