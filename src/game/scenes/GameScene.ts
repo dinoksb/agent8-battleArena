@@ -42,6 +42,9 @@ export class GameScene extends Phaser.Scene {
   // Track dead players to prevent auto-respawn
   private deadPlayers: Set<string> = new Set();
   
+  // 총알 제거 요청 추적을 위한 변수 추가
+  private projectileDestroyRequests: Set<string> = new Set();
+  
   constructor() {
     super({ key: "GameScene" });
   }
@@ -170,6 +173,9 @@ export class GameScene extends Phaser.Scene {
     // Subscribe to projectile creation events
     this.server.onRoomMessage(this.roomId, "projectileFired", this.handleProjectileFired.bind(this));
     
+    // 총알 제거 이벤트 구독 추가
+    this.server.onRoomMessage(this.roomId, "projectileDestroyed", this.handleProjectileDestroyed.bind(this));
+    
     // Subscribe to room state for obstacles
     this.server.subscribeRoomState(this.roomId, (state: any) => {
       if (state && state.obstacles && !this.obstaclesCreated) {
@@ -208,22 +214,22 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // ÃÂ¬ÃÂ¶ÃÂªÃÂ°: ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂªÃÂ° ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ´ÃÂ«ÃÂ²ÃÂ¤ÃÂ­ÃÂ¸ ÃÂªÃÂµÃÂ¬ÃÂ«
+    // 주석: 플레이어 사망 이벤트 구독
     this.server.onRoomMessage(this.roomId, "playerDied", (data: any) => {
       const { playerId } = data;
       
-      // ÃÂ«ÃÂ´ ÃÂ¬ÃÂºÃÂ«ÃÂ¦ÃÂ­ÃÂ­ÃÂ°ÃÂªÃÂ° ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ÃÂ¬ ÃÂ«ÃÂ«ÃÂ§ ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬
+      // 만약 자신이 사망한 플레이어라면
       if (playerId === this.myAccount) {
-        // ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ´ÃÂ«ÃÂ²ÃÂ¤ÃÂ­ÃÂ¸ ÃÂ«ÃÂ°ÃÂ¬, UI ÃÂ­ÃÂ¬
+        // 자신의 사망을 알림, UI 노출
         window.dispatchEvent(new CustomEvent('player-died'));
         
-        // deadPlayers ÃÂ¬ÃÂ¸ÃÂ­ÃÂ¸ÃÂ¬ ÃÂ¬ÃÂ¶ÃÂªÃÂ°
+        // deadPlayers 리스트에 추가
         this.deadPlayers.add(playerId);
       } else if (this.otherPlayers.has(playerId)) {
-        // ÃÂ«ÃÂ¤ÃÂ«ÃÂ¥ÃÂ¸ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂªÃÂ° ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ÃÂ¬ ÃÂªÃÂ²ÃÂ½ÃÂ¬ÃÂ° deadPlayers ÃÂ¬ÃÂ¸ÃÂ­ÃÂ¸ÃÂ¬ ÃÂ¬ÃÂ¶ÃÂªÃÂ°
+        // 다른 플레이어가 죽었을 때 deadPlayers 리스트에 추가
         this.deadPlayers.add(playerId);
         
-        // ÃÂ«ÃÂ¤ÃÂ«ÃÂ¥ÃÂ¸ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂ¬ ÃÂ¬ÃÂºÃÂ«ÃÂ¦ÃÂ­ÃÂ­ÃÂ° ÃÂ­ÃÂ¬ÃÂ«ÃÂªÃÂ­ ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬
+        // 다른 플레이어의 상태 업데이트 (비활성화)
         const player = this.otherPlayers.get(playerId);
         if (player) {
           player.setHealth(0);
@@ -254,12 +260,18 @@ export class GameScene extends Phaser.Scene {
     
     // Update projectiles
     this.projectiles.forEach((projectile, id) => {
+      // 이미 제거 요청이 있는 총알은 처리하지 않음
+      if (this.projectileDestroyRequests.has(id)) {
+        return;
+      }
+      
       // Check for projectile collisions with players
       if (this.player && projectile.getData("ownerId") !== this.myAccount && !this.player.isDead()) {
         if (this.physics.overlap(projectile, this.player.sprite)) {
           this.handlePlayerHit(this.myAccount, projectile.getData("ownerId"), id);
-          projectile.destroy();
-          this.projectiles.delete(id);
+          // 총알 제거 요청 목록에 추가
+          this.destroyProjectile(id, true);
+          return;
         }
       }
       
@@ -268,24 +280,80 @@ export class GameScene extends Phaser.Scene {
         if (projectile.getData("ownerId") === this.myAccount && !otherPlayer.isDead()) {
           if (this.physics.overlap(projectile, otherPlayer.sprite)) {
             this.handlePlayerHit(playerId, this.myAccount, id);
-            projectile.destroy();
-            this.projectiles.delete(id);
+            // 총알 제거 요청 목록에 추가
+            this.destroyProjectile(id, true);
+            return;
           }
         }
       });
       
       // Check for projectile collisions with obstacles
       if (this.physics.overlap(projectile, this.obstacles)) {
-        projectile.destroy();
-        this.projectiles.delete(id);
+        // 총알이 장애물과 충돌한 경우에도 모든 클라이언트에 알림
+        this.destroyProjectile(id, true);
+        return;
       }
       
       // Remove projectiles that have exceeded their lifetime
       const creationTime = projectile.getData("creationTime");
       if (Date.now() - creationTime > 2000) { // 2 seconds lifetime
-        projectile.destroy();
-        this.projectiles.delete(id);
+        // 수명이 다한 총알도 모든 클라이언트에 알림
+        this.destroyProjectile(id, true);
       }
+    });
+  }
+
+  // 총알 제거 메서드 - 네트워크 동기화 포함
+  private destroyProjectile(projectileId: string, notifyServer: boolean = false) {
+    // 이미 제거 요청된 총알이면 무시
+    if (this.projectileDestroyRequests.has(projectileId)) {
+      return;
+    }
+    
+    // 총알 제거 요청 목록에 추가
+    this.projectileDestroyRequests.add(projectileId);
+    
+    // 실제 총알 객체 가져오기
+    const projectile = this.projectiles.get(projectileId);
+    if (projectile) {
+      // 시각적 효과 (파티클 등)
+      this.addProjectileDestroyEffect(projectile.x, projectile.y);
+      
+      // 총알 객체 제거
+      projectile.destroy();
+      this.projectiles.delete(projectileId);
+      
+      // 서버에 알림 (필요한 경우)
+      if (notifyServer && this.serverInitialized) {
+        this.server.remoteFunction("projectileDestroyed", [{
+          projectileId: projectileId,
+          x: projectile.x,
+          y: projectile.y,
+          timestamp: Date.now()
+        }]);
+      }
+    }
+    
+    // 약간의 지연 후 제거 요청 목록에서 제거 (메모리 관리)
+    setTimeout(() => {
+      this.projectileDestroyRequests.delete(projectileId);
+    }, 5000);
+  }
+  
+  // 총알 제거 시 시각적 효과 추가
+  private addProjectileDestroyEffect(x: number, y: number) {
+    // 간단한 파티클 효과
+    const particles = this.add.particles(x, y, 'projectile', {
+      speed: { min: 50, max: 100 },
+      scale: { start: 0.4, end: 0 },
+      lifespan: 300,
+      blendMode: 'ADD',
+      quantity: 8
+    });
+    
+    // 잠시 후 파티클 제거
+    this.time.delayedCall(300, () => {
+      particles.destroy();
     });
   }
 
@@ -325,8 +393,6 @@ export class GameScene extends Phaser.Scene {
       console.error("Error creating obstacles from server:", error);
     }
   }
-  
-  // Create
 
   // Create border obstacles (identical on all clients)
   private createBorderObstacles() {
@@ -414,8 +480,29 @@ export class GameScene extends Phaser.Scene {
     }
   }
   
+  // 총알 제거 이벤트 핸들러 추가
+  private handleProjectileDestroyed(data: any) {
+    const { projectileId } = data;
+    
+    // 자신이 발사한 총알인 경우에는 이미 제거했을 수 있으므로 확인
+    if (this.projectileDestroyRequests.has(projectileId)) {
+      return;
+    }
+    
+    // 다른 클라이언트에서 파괴된 총알을 이 클라이언트에서도 파괴
+    this.destroyProjectile(projectileId, false);
+    
+    // 로그 출력 (디버깅용)
+    console.log(`Projectile destroyed by network event: ${projectileId}`);
+  }
+  
   private createProjectile(data: any) {
     const { x, y, targetX, targetY, id, ownerId } = data;
+    
+    // 이미 제거 요청된 총알이면 생성하지 않음
+    if (this.projectileDestroyRequests.has(id)) {
+      return null;
+    }
     
     // Create sprite
     const projectile = this.physics.add.sprite(x, y, "projectile");
@@ -457,8 +544,8 @@ export class GameScene extends Phaser.Scene {
       projectile,
       this.obstacles,
       () => {
-        projectile.destroy();
-        this.projectiles.delete(id);
+        // 장애물과 충돌 시 총알 제거 및 서버에 알림
+        this.destroyProjectile(id, true);
       },
       undefined,
       this
@@ -469,7 +556,12 @@ export class GameScene extends Phaser.Scene {
 
   // Handle player hit sync message from server
   private handlePlayerHitSync(data: any) {
-    const { targetId, attackerId, damage, newHealth, timestamp, forceRemoveFromDeadPlayers, isDead } = data;
+    const { targetId, attackerId, damage, newHealth, timestamp, forceRemoveFromDeadPlayers, isDead, projectileId } = data;
+    
+    // 만약 projectileId가 존재하면 해당 총알 제거
+    if (projectileId && this.projectiles.has(projectileId)) {
+      this.destroyProjectile(projectileId, false);
+    }
     
     // Check if we need to force remove from deadPlayers set
     if (forceRemoveFromDeadPlayers && targetId) {
@@ -483,7 +575,7 @@ export class GameScene extends Phaser.Scene {
       // Update our health to match server's value
       this.player.setHealth(newHealth);
       
-      // ÃÂ«ÃÂ¡ÃÂ¬ÃÂ»ÃÂ¬ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂªÃÂ° ÃÂ«ÃÂ§ÃÂ¬ÃÂ¬ ÃÂ«ÃÂ«ÃÂ§ ÃÂ¬ÃÂ¹ÃÂ´ÃÂ«ÃÂ©ÃÂ«ÃÂ¼ ÃÂ­ÃÂ«ÃÂ¤ÃÂ«ÃÂ¦ÃÂ¼ ÃÂ­ÃÂ¨ÃÂªÃÂ³ÃÂ¼ ÃÂ¬ ÃÂ¬ÃÂ©
+      // 카메라 효과로 피격 느낌을 강화
       this.cameras.main.shake(100, 0.01);
       
       // Check if player died
@@ -604,7 +696,7 @@ export class GameScene extends Phaser.Scene {
     
     console.log(`Player respawned: ${playerId}, forceRemoveFromDeadPlayers: ${forceRemoveFromDeadPlayers}`);
     
-    // ÃÂ«ÃÂ´ ÃÂ¬ÃÂºÃÂ«ÃÂ¦ÃÂ­ÃÂ­ÃÂ°ÃÂ¬ÃÂ¸ ÃÂªÃÂ²ÃÂ½ÃÂ¬ÃÂ° ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬ÃÂ­ÃÂ¬ÃÂ§ ÃÂ¬ÃÂ¬ (ÃÂ«ÃÂ¡ÃÂ¬ÃÂ»ÃÂ¬ÃÂ¬ÃÂ¬ ÃÂ¬ÃÂ´ÃÂ«ÃÂ¯ÃÂ¸ ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬ÃÂ«ÃÂ¨)
+    // 자신의 부활은 로컬에서 처리하므로 무시
     if (playerId === this.myAccount) return;
     
     // Force remove from deadPlayers set if flag is present
@@ -679,15 +771,15 @@ export class GameScene extends Phaser.Scene {
     const { states, respawnedPlayerId, forceRemoveFromDeadPlayers } = data;
     
     // Force remove from deadPlayers set if flag is present
-        if (forceRemoveFromDeadPlayers && respawnedPlayerId) {
+    if (forceRemoveFromDeadPlayers && respawnedPlayerId) {
       this.deadPlayers.delete(respawnedPlayerId);
       console.log(`Removed player ${respawnedPlayerId} from deadPlayers set due to force state update`);
     } else if (forceRemoveFromDeadPlayers) {
-      // ÃÂ«ÃÂªÃÂ¨ÃÂ«  ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂ¬ ÃÂ«ÃÂ­ÃÂ´ forceRemoveFromDeadPlayersÃÂªÃÂ° trueÃÂ¬ÃÂ¸ ÃÂªÃÂ²ÃÂ½ÃÂ¬ÃÂ°
-      // ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂ¤ÃÂ­ÃÂ°ÃÂ« ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂ«ÃÂ¤ÃÂ¬ deadPlayers ÃÂ¬ÃÂ¸ÃÂ­ÃÂ¸ÃÂ¬ÃÂ¬ ÃÂ¬ ÃÂªÃÂ±ÃÂ°
+      // 만약 모든 사용자에게 forceRemoveFromDeadPlayers가 true이면
+      // 명시적으로 특정 플레이어가 지정되지 않은 경우 모든 deadPlayers를 초기화
       if (states) {
         states.forEach((state: any) => {
-          // ÃÂ¬ÃÂ²ÃÂ´ÃÂ« ÃÂ¥ÃÂ¬ÃÂ´ ÃÂ¬ÃÂªÃÂ³  ÃÂ«ÃÂ¦ÃÂ¬ÃÂ¬ÃÂ¤ÃÂ­ÃÂ° ÃÂ­ÃÂ«ÃÂªÃÂ·ÃÂ¸ÃÂªÃÂ° trueÃÂ¬ÃÂ¸ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂ«ÃÂ¤ÃÂ¬ deadPlayersÃÂ¬ÃÂ¬ ÃÂ¬ ÃÂªÃÂ±ÃÂ°
+          // 상태 체크: 살아있고 명시적으로 forceRemoveFromDeadPlayers가 true인 경우
           if (state.health > 0 && (state.isRespawned || state.forceRemoveFromDeadPlayers)) {
             this.deadPlayers.delete(state.account);
           }
@@ -716,7 +808,7 @@ export class GameScene extends Phaser.Scene {
       console.log(`Local player hit. Current health: ${this.player.health}`);
       this.player.damage(damage);
       
-      // ÃÂ«ÃÂ¡ÃÂ¬ÃÂ»ÃÂ¬ ÃÂ­ÃÂ« ÃÂ¬ÃÂ´ÃÂ¬ÃÂ´ÃÂªÃÂ° ÃÂ«ÃÂ§ÃÂ¬ÃÂ¬ ÃÂ«ÃÂ«ÃÂ§ ÃÂ¬ÃÂ¹ÃÂ´ÃÂ«ÃÂ©ÃÂ«ÃÂ¼ ÃÂ­ÃÂ«ÃÂ¤ÃÂ«ÃÂ¦ÃÂ¼ ÃÂ­ÃÂ¨ÃÂªÃÂ³ÃÂ¼ ÃÂ¬ ÃÂ¬ÃÂ©
+      // 카메라 효과로 피격 느낌을 강화
       this.cameras.main.shake(100, 0.01);
       
       const newHealth = this.player.health;
@@ -774,6 +866,7 @@ export class GameScene extends Phaser.Scene {
             attackerId,
             damage,
             newHealth,
+            projectileId, // 프로젝타일 ID도 함께 전송
             timestamp
           }
         ]);
@@ -825,7 +918,7 @@ export class GameScene extends Phaser.Scene {
       name: this.playerName,
       animation: currentAnimation,
       flipX: this.player.sprite.flipX,
-      // ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ­ÃÂ« ÃÂ­ÃÂ¨ÃÂªÃÂ» ÃÂ¬ ÃÂ¬ÃÂ¡
+      // 사망 여부 정보도 추가
       isDead: this.player.isDead()
     };
     
@@ -929,9 +1022,9 @@ export class GameScene extends Phaser.Scene {
           }
           
           // Health update logic - MODIFIED TO HANDLE RESPAWNS
-          // ÃÂ¬ÃÂ«ÃÂ²ÃÂªÃÂ° ÃÂ«ÃÂªÃÂ¬ÃÂ¬  ÃÂ¬ ÃÂ«ÃÂ³ÃÂ´ÃÂ«ÃÂ¥ÃÂ¼ ÃÂ«ÃÂ°ÃÂ¬: ÃÂ«ÃÂªÃÂ¬ÃÂ¬ ÃÂ¬ÃÂ¸ isDead ÃÂ­ÃÂ«ÃÂªÃÂ·ÃÂ¸ÃÂªÃÂ° ÃÂ¬ÃÂ«ÃÂ¬ÃÂ§ ÃÂ­ÃÂ¬ÃÂ¸
+          // 상태 업데이트 로직 강화: isDead 플래그가 있는지 확인
           if (playerState.isDead) {
-            // ÃÂ¬ÃÂ«ÃÂ²ÃÂ¬ÃÂ¬ ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ­ÃÂ«ÃÂ¼ÃÂªÃÂ³  ÃÂ«ÃÂ³ÃÂ´ÃÂ«ÃÂ´ÃÂ«ÃÂ©ÃÂ´ ÃÂ«ÃÂ¬ÃÂ´ÃÂ¬ÃÂ¡ÃÂ°ÃÂªÃÂ±ÃÂ´ ÃÂ¬ÃÂ£ÃÂ½ÃÂ¬ ÃÂ¬ÃÂ­ÃÂ«ÃÂ¡ ÃÂ¬ÃÂ²ÃÂ«ÃÂ¦ÃÂ¬
+            // 상태에 isDead가 true인 경우 비활성화하고 deadPlayers에 추가
             player.setHealth(0);
             this.deadPlayers.add(playerId);
           } else if (this.deadPlayers.has(playerId) && !playerState.forceRemoveFromDeadPlayers) {
@@ -950,7 +1043,7 @@ export class GameScene extends Phaser.Scene {
             if (playerState.health > 0 && this.deadPlayers.has(playerId)) {
               console.log(`Player ${playerId} has respawned, resetting state`);
               this.deadPlayers.delete(playerId);
-              player.reset();
+                            player.reset();
             }
             
             // If we have a recent local damage value (within last 2 seconds), use it

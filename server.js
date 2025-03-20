@@ -65,7 +65,7 @@ class Server {
   }
 
   async playerAttack(data) {
-    // 프로젝틸 공격 처리
+    // 프로젝트 공격 처리
     if (data.type === "projectile") {
       await $room.broadcastToRoom('projectileFired', data);
     } else {
@@ -74,8 +74,14 @@ class Server {
     }
   }
 
+  // 새로운 메서드: 총알 제거 이벤트를 모든 클라이언트에 브로드캐스트
+  async projectileDestroyed(data) {
+    // 방 내 모든 클라이언트에게 총알 제거 이벤트 브로드캐스트
+    await $room.broadcastToRoom('projectileDestroyed', data);
+  }
+
   async playerHit(data) {
-    const { targetId, attackerId, damage, timestamp } = data;
+    const { targetId, attackerId, projectileId, damage, timestamp } = data;
     
     // Get current target health
     const targetState = await $room.getUserState(targetId);
@@ -107,7 +113,8 @@ class Server {
       damage,
       newHealth,
       timestamp,
-      isDead: isDead
+      isDead: isDead,
+      projectileId  // 추가: 총알 ID를 포함하여 클라이언트가 해당 총알을 제거할 수 있도록 함
     });
     
     // Check if player died (health reached 0)
@@ -185,7 +192,7 @@ class Server {
       ...completePlayerState
     });
     
-    // 강제 상태 업데이트를 통해 필드 전달
+    // 강제 상태 업데이트를 통해 동기화
     const allUserStates = await $room.getAllUserStates();
     await $room.broadcastToRoom('forceStateUpdate', {
       states: allUserStates,
