@@ -26,11 +26,6 @@ const GameUI: React.FC<GameUIProps> = ({ roomId, onExitGame }) => {
         <div className="bg-gray-900 bg-opacity-75 p-2 rounded-md">
           <p className="text-sm font-medium">Players: {roomState?.$users?.length || 0}/8</p>
         </div>
-        {roomState?.gameTime && (
-          <div className="bg-gray-900 bg-opacity-75 p-2 rounded-md">
-            <p className="text-sm font-medium">Time: {Math.floor(roomState.gameTime / 1000)}s</p>
-          </div>
-        )}
       </div>
 
       {/* Scoreboard */}

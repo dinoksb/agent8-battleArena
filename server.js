@@ -64,11 +64,11 @@ class Server {
   }
 
   async playerAttack(data) {
-    // í¬ì¬ì²´ ê³µê²© íì ì²ë¦¬
+    // Ã­Â¬Ã¬Â¬Ã¬Â²Â´ ÃªÂ³ÂµÃªÂ²Â© Ã­Ã¬ Ã¬Â²Ã«Â¦Â¬
     if (data.type === "projectile") {
       await $room.broadcastToRoom('projectileFired', data);
     } else {
-      // ì´ì  ë°©ìì ê³µê²© ì²ë¦¬ ì ì§ (íì í¸íì±)
+      // Ã¬Â´Ã¬  Ã«Â°Â©Ã¬Ã¬ ÃªÂ³ÂµÃªÂ²Â© Ã¬Â²Ã«Â¦Â¬ Ã¬ Ã¬Â§ (Ã­Ã¬ Ã­Â¸Ã­Ã¬Â±)
       await $room.broadcastToRoom('playerAttack', data);
     }
   }
@@ -86,7 +86,7 @@ class Server {
     // Update target health
     await $room.updateUserState(targetId, { 
       health: newHealth,
-      // ë§ì½ ì²´ë ¥ì´ 0ì´ë©´ isDead íëê·¸ë¥¼ ì¤ì 
+      // Ã«Â§Ã¬Â½ Ã¬Â²Â´Ã« Â¥Ã¬Â´ 0Ã¬Â´Ã«Â©Â´ isDead Ã­Ã«ÃªÂ·Â¸Ã«Â¥Â¼ Ã¬Â¤Ã¬ 
       isDead: newHealth <= 0 
     });
     
@@ -97,7 +97,7 @@ class Server {
       damage,
       newHealth,
       timestamp,
-      // ì²´ë ¥ì´ 0ì´ë©´ íë ì¤í ì£½ì ìí ì í
+      // Ã¬Â²Â´Ã« Â¥Ã¬Â´ 0Ã¬Â´Ã«Â©Â´ Ã­Ã« Ã¬Â¤Ã­ Ã¬Â£Â½Ã¬ Ã¬Ã­ Ã¬ Ã­
       isDead: newHealth <= 0
     });
     
@@ -159,21 +159,21 @@ class Server {
       flipX: false,
       score: currentState.score || 0,
       lastUpdate: Date.now(),
-      // íë ì´ì¸í¸ìê² deadPlayers ì¸í¸ìì ì ê±°íë¼ê³  ì í¸ ë³´ë´ê¸°
+      // Ã­Ã« Ã¬Â´Ã¬Â¸Ã­Â¸Ã¬ÃªÂ² deadPlayers Ã¬Â¸Ã­Â¸Ã¬Ã¬ Ã¬ ÃªÂ±Â°Ã­Ã«Â¼ÃªÂ³  Ã¬ Ã­Â¸ Ã«Â³Â´Ã«Â´ÃªÂ¸Â°
       forceRemoveFromDeadPlayers: true
     };
     
     // Update player state with complete data
     await $room.updateMyState(completePlayerState);
     
-    // ë¦¬ì¤í° ì´ë²¤í¸ì forceRemoveFromDeadPlayers íëê·¸ ì¶ê°
+    // Ã«Â¦Â¬Ã¬Â¤Ã­Â° Ã¬Â´Ã«Â²Â¤Ã­Â¸Ã¬ forceRemoveFromDeadPlayers Ã­Ã«ÃªÂ·Â¸ Ã¬Â¶ÃªÂ°
     await $room.broadcastToRoom('playerRespawned', {
       playerId: $sender.account,
       forceRemoveFromDeadPlayers: true,
       ...completePlayerState
     });
     
-    // ê°ì  ìí ìë°ì´í¸ìë íëê·¸ ì¶ê°
+    // ÃªÂ°Ã¬  Ã¬Ã­ Ã¬Ã«Â°Ã¬Â´Ã­Â¸Ã¬Ã« Ã­Ã«ÃªÂ·Â¸ Ã¬Â¶ÃªÂ°
     const allUserStates = await $room.getAllUserStates();
     await $room.broadcastToRoom('forceStateUpdate', {
       states: allUserStates,
@@ -182,13 +182,13 @@ class Server {
       timestamp: Date.now()
     });
     
-    // ë¦¬ì¤í° ìë¦¼ë ì¤ì¼ì¤ë§
+    // Ã«Â¦Â¬Ã¬Â¤Ã­Â° Ã¬Ã«Â¦Â¼Ã« Ã¬Â¤Ã¬Â¼Ã¬Â¤Ã«Â§
     this.scheduleRespawnReminders($sender.account, completePlayerState);
   }
   
-  // ë¦¬ì¤í° ìë¦¼ í¨ì (ì¤ë³µ ì ì ì ê±°)
+  // Ã«Â¦Â¬Ã¬Â¤Ã­Â° Ã¬Ã«Â¦Â¼ Ã­Â¨Ã¬ (Ã¬Â¤Ã«Â³Âµ Ã¬ Ã¬ Ã¬ ÃªÂ±Â°)
   async scheduleRespawnReminders(playerId, playerState) {
-    // ì²« ë²ì§¸ ìë¦¼ (500ms)
+    // Ã¬Â²Â« Ã«Â²Ã¬Â§Â¸ Ã¬Ã«Â¦Â¼ (500ms)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -203,7 +203,7 @@ class Server {
       }
     }, 500);
     
-    // ë ë²ì§¸ ìë¦¼ (1.5s)
+    // Ã« Ã«Â²Ã¬Â§Â¸ Ã¬Ã«Â¦Â¼ (1.5s)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {
@@ -218,7 +218,7 @@ class Server {
       }
     }, 1500);
     
-    // ì¸ ë²ì§¸ ìë¦¼ (3s)
+    // Ã¬Â¸ Ã«Â²Ã¬Â§Â¸ Ã¬Ã«Â¦Â¼ (3s)
     setTimeout(async () => {
       try {
         await $room.broadcastToRoom('playerRespawnReminder', {

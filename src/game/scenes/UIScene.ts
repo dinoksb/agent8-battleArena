@@ -3,7 +3,9 @@ import Phaser from "phaser";
 export class UIScene extends Phaser.Scene {
   private healthBar!: Phaser.GameObjects.Graphics;
   private healthText!: Phaser.GameObjects.Text;
+  private gameTimeText!: Phaser.GameObjects.Text;
   private gameScene!: Phaser.Scene;
+  private gameTimeBackground!: Phaser.GameObjects.Graphics;
   
   constructor() {
     super({ key: "UIScene" });
@@ -23,11 +25,54 @@ export class UIScene extends Phaser.Scene {
     });
     this.healthText.setScrollFactor(0);
     
+    // Create game time display at the top center of the screen
+    this.createGameTimeDisplay();
+    
     // Listen for health changes
     this.gameScene.events.on("updateHealth", this.updateHealth, this);
     
+    // Listen for game time updates
+    this.gameScene.events.on("updateGameTime", this.updateGameTime, this);
+    
     // Make sure UI stays on top
     this.scene.bringToTop();
+  }
+  
+  private createGameTimeDisplay() {
+    // Get canvas width for positioning
+    const width = this.cameras.main.width;
+    
+    // Create background for game time
+    this.gameTimeBackground = this.add.graphics();
+    this.gameTimeBackground.setScrollFactor(0);
+    this.gameTimeBackground.fillStyle(0x000000, 0.5);
+    this.gameTimeBackground.fillRoundedRect(width / 2 - 50, 10, 100, 30, 6);
+    
+    // Create game time text
+    this.gameTimeText = this.add.text(width / 2, 25, "Time: 0s", {
+      fontSize: "14px",
+      color: "#ffffff",
+      fontStyle: "bold"
+    });
+    this.gameTimeText.setScrollFactor(0);
+    this.gameTimeText.setOrigin(0.5);
+    
+    // Handle window resize to reposition the game time text
+    this.scale.on('resize', this.handleResize, this);
+  }
+  
+  private handleResize() {
+    if (!this.gameTimeText || !this.gameTimeBackground) return;
+    
+    const width = this.cameras.main.width;
+    
+    // Reposition text
+    this.gameTimeText.setPosition(width / 2, 25);
+    
+    // Redraw background
+    this.gameTimeBackground.clear();
+    this.gameTimeBackground.fillStyle(0x000000, 0.5);
+    this.gameTimeBackground.fillRoundedRect(width / 2 - 50, 10, 100, 30, 6);
   }
   
   updateHealth(health: number) {
@@ -51,5 +96,13 @@ export class UIScene extends Phaser.Scene {
     }
     
     this.healthBar.fillRect(20, 40, 2 * health, 20);
+  }
+  
+  updateGameTime(gameTime: number) {
+    if (!this.gameTimeText) return;
+    
+    // Format the time as seconds
+    const seconds = Math.floor(gameTime / 1000);
+    this.gameTimeText.setText(`Time: ${seconds}s`);
   }
 }

@@ -139,8 +139,8 @@ export class Player {
     this.nameText.setPosition(this.sprite.x, this.sprite.y - 50);
     this.updateHealthBar();
     
-    // Handle movement for local player
-    if (this.isLocalPlayer && !this.isAttacking) {
+    // Handle movement for local player - MODIFIED to allow movement during attack
+    if (this.isLocalPlayer) {
       this.handleMovement();
       this.handleRotation();
     }
@@ -183,29 +183,34 @@ export class Player {
       this.sprite.body.velocity.normalize().scale(this.normalSpeed);
     }
     
-    // Update animation based on movement
-    if (isMoving) {
-      // Save last direction for sprite flipping
-      if (directionX !== 0) {
-        this.lastDirection.x = directionX;
+    // Update animation based on movement, but only if not currently attacking
+    if (!this.isAttacking) {
+      if (isMoving) {
+        // Save last direction for sprite flipping
+        if (directionX !== 0) {
+          this.lastDirection.x = directionX;
+        }
+        
+        // Flip sprite based on horizontal direction
+        if (directionX < 0) {
+          this.sprite.setFlipX(true);
+        } else if (directionX > 0) {
+          this.sprite.setFlipX(false);
+        }
+        
+        // Play walk animation if not already playing
+        if (this.currentAnimation !== "walk") {
+          this.playWalkAnimation();
+        }
+      } else {
+        // Play idle animation if not already playing
+        if (this.currentAnimation !== "idle") {
+          this.playIdleAnimation();
+        }
       }
-      
-      // Flip sprite based on horizontal direction
-      if (directionX < 0) {
-        this.sprite.setFlipX(true);
-      } else if (directionX > 0) {
-        this.sprite.setFlipX(false);
-      }
-      
-      // Play walk animation if not already playing
-      if (this.currentAnimation !== "walk") {
-        this.playWalkAnimation();
-      }
-    } else {
-      // Play idle animation if not already playing
-      if (this.currentAnimation !== "idle") {
-        this.playIdleAnimation();
-      }
+    } else if (isMoving && directionX !== 0) {
+      // If attacking but moving, still update the sprite direction
+      this.sprite.setFlipX(directionX < 0);
     }
   }
   

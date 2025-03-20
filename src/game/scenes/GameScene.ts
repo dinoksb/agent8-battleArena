@@ -22,6 +22,7 @@ export class GameScene extends Phaser.Scene {
   private serverInitialized: boolean = false;
   private assetsLoaded: boolean = false;
   private obstaclesCreated: boolean = false;
+  private lastGameTime: number = 0;
   
   // Player color tracking
   private usedColorIndices: Set<number> = new Set();
@@ -174,6 +175,12 @@ export class GameScene extends Phaser.Scene {
       if (state && state.obstacles && !this.obstaclesCreated) {
         this.createObstaclesFromServer(state.obstacles);
       }
+      
+      // Update game time if it has changed
+      if (state && state.gameTime !== undefined && state.gameTime !== this.lastGameTime) {
+        this.lastGameTime = state.gameTime;
+        this.events.emit("updateGameTime", state.gameTime);
+      }
     });
     
     // Subscribe to player hit events to ensure health sync
@@ -201,22 +208,22 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
-    // ì¶ê°: íë ì´ì´ê° ì£½ì ì´ë²¤í¸ êµ¬ë
+    // Ã¬Â¶ÃªÂ°: Ã­Ã« Ã¬Â´Ã¬Â´ÃªÂ° Ã¬Â£Â½Ã¬ Ã¬Â´Ã«Â²Â¤Ã­Â¸ ÃªÂµÂ¬Ã«
     this.server.onRoomMessage(this.roomId, "playerDied", (data: any) => {
       const { playerId } = data;
       
-      // ë´ ìºë¦­í°ê° ì£½ìì ëë§ ì²ë¦¬
+      // Ã«Â´ Ã¬ÂºÃ«Â¦Â­Ã­Â°ÃªÂ° Ã¬Â£Â½Ã¬Ã¬ Ã«Ã«Â§ Ã¬Â²Ã«Â¦Â¬
       if (playerId === this.myAccount) {
-        // ì£½ì ì´ë²¤í¸ ë°ì, UI íì
+        // Ã¬Â£Â½Ã¬ Ã¬Â´Ã«Â²Â¤Ã­Â¸ Ã«Â°Ã¬, UI Ã­Ã¬
         window.dispatchEvent(new CustomEvent('player-died'));
         
-        // deadPlayers ì¸í¸ì ì¶ê°
+        // deadPlayers Ã¬Â¸Ã­Â¸Ã¬ Ã¬Â¶ÃªÂ°
         this.deadPlayers.add(playerId);
       } else if (this.otherPlayers.has(playerId)) {
-        // ë¤ë¥¸ íë ì´ì´ê° ì£½ìì ê²½ì° deadPlayers ì¸í¸ì ì¶ê°
+        // Ã«Â¤Ã«Â¥Â¸ Ã­Ã« Ã¬Â´Ã¬Â´ÃªÂ° Ã¬Â£Â½Ã¬Ã¬ ÃªÂ²Â½Ã¬Â° deadPlayers Ã¬Â¸Ã­Â¸Ã¬ Ã¬Â¶ÃªÂ°
         this.deadPlayers.add(playerId);
         
-        // ë¤ë¥¸ íë ì´ì´ì ìºë¦­í° í¬ëªí ì²ë¦¬
+        // Ã«Â¤Ã«Â¥Â¸ Ã­Ã« Ã¬Â´Ã¬Â´Ã¬ Ã¬ÂºÃ«Â¦Â­Ã­Â° Ã­Â¬Ã«ÂªÃ­ Ã¬Â²Ã«Â¦Â¬
         const player = this.otherPlayers.get(playerId);
         if (player) {
           player.setHealth(0);
@@ -476,7 +483,7 @@ export class GameScene extends Phaser.Scene {
       // Update our health to match server's value
       this.player.setHealth(newHealth);
       
-      // ë¡ì»¬ íë ì´ì´ê° ë§ìì ëë§ ì¹´ë©ë¼ íë¤ë¦¼ í¨ê³¼ ì ì©
+      // Ã«Â¡Ã¬Â»Â¬ Ã­Ã« Ã¬Â´Ã¬Â´ÃªÂ° Ã«Â§Ã¬Ã¬ Ã«Ã«Â§ Ã¬Â¹Â´Ã«Â©Ã«Â¼ Ã­Ã«Â¤Ã«Â¦Â¼ Ã­Â¨ÃªÂ³Â¼ Ã¬ Ã¬Â©
       this.cameras.main.shake(100, 0.01);
       
       // Check if player died
@@ -597,7 +604,7 @@ export class GameScene extends Phaser.Scene {
     
     console.log(`Player respawned: ${playerId}, forceRemoveFromDeadPlayers: ${forceRemoveFromDeadPlayers}`);
     
-    // ë´ ìºë¦­í°ì¸ ê²½ì° ì²ë¦¬íì§ ìì (ë¡ì»¬ìì ì´ë¯¸ ì²ë¦¬ë¨)
+    // Ã«Â´ Ã¬ÂºÃ«Â¦Â­Ã­Â°Ã¬Â¸ ÃªÂ²Â½Ã¬Â° Ã¬Â²Ã«Â¦Â¬Ã­Ã¬Â§ Ã¬Ã¬ (Ã«Â¡Ã¬Â»Â¬Ã¬Ã¬ Ã¬Â´Ã«Â¯Â¸ Ã¬Â²Ã«Â¦Â¬Ã«Â¨)
     if (playerId === this.myAccount) return;
     
     // Force remove from deadPlayers set if flag is present
@@ -676,11 +683,11 @@ export class GameScene extends Phaser.Scene {
       this.deadPlayers.delete(respawnedPlayerId);
       console.log(`Removed player ${respawnedPlayerId} from deadPlayers set due to force state update`);
     } else if (forceRemoveFromDeadPlayers) {
-      // ëª¨ë  íë ì´ì´ì ëí´ forceRemoveFromDeadPlayersê° trueì¸ ê²½ì°
-      // ë¦¬ì¤í°ë íë ì´ì´ë¤ì deadPlayers ì¸í¸ìì ì ê±°
+      // Ã«ÂªÂ¨Ã«  Ã­Ã« Ã¬Â´Ã¬Â´Ã¬ Ã«Ã­Â´ forceRemoveFromDeadPlayersÃªÂ° trueÃ¬Â¸ ÃªÂ²Â½Ã¬Â°
+      // Ã«Â¦Â¬Ã¬Â¤Ã­Â°Ã« Ã­Ã« Ã¬Â´Ã¬Â´Ã«Â¤Ã¬ deadPlayers Ã¬Â¸Ã­Â¸Ã¬Ã¬ Ã¬ ÃªÂ±Â°
       if (states) {
         states.forEach((state: any) => {
-          // ì²´ë ¥ì´ ìê³  ë¦¬ì¤í° íëê·¸ê° trueì¸ íë ì´ì´ë¤ì deadPlayersìì ì ê±°
+          // Ã¬Â²Â´Ã« Â¥Ã¬Â´ Ã¬ÃªÂ³  Ã«Â¦Â¬Ã¬Â¤Ã­Â° Ã­Ã«ÃªÂ·Â¸ÃªÂ° trueÃ¬Â¸ Ã­Ã« Ã¬Â´Ã¬Â´Ã«Â¤Ã¬ deadPlayersÃ¬Ã¬ Ã¬ ÃªÂ±Â°
           if (state.health > 0 && (state.isRespawned || state.forceRemoveFromDeadPlayers)) {
             this.deadPlayers.delete(state.account);
           }
@@ -709,7 +716,7 @@ export class GameScene extends Phaser.Scene {
       console.log(`Local player hit. Current health: ${this.player.health}`);
       this.player.damage(damage);
       
-      // ë¡ì»¬ íë ì´ì´ê° ë§ìì ëë§ ì¹´ë©ë¼ íë¤ë¦¼ í¨ê³¼ ì ì©
+      // Ã«Â¡Ã¬Â»Â¬ Ã­Ã« Ã¬Â´Ã¬Â´ÃªÂ° Ã«Â§Ã¬Ã¬ Ã«Ã«Â§ Ã¬Â¹Â´Ã«Â©Ã«Â¼ Ã­Ã«Â¤Ã«Â¦Â¼ Ã­Â¨ÃªÂ³Â¼ Ã¬ Ã¬Â©
       this.cameras.main.shake(100, 0.01);
       
       const newHealth = this.player.health;
@@ -818,7 +825,7 @@ export class GameScene extends Phaser.Scene {
       name: this.playerName,
       animation: currentAnimation,
       flipX: this.player.sprite.flipX,
-      // ì£½ì ìíë í¨ê» ì ì¡
+      // Ã¬Â£Â½Ã¬ Ã¬Ã­Ã« Ã­Â¨ÃªÂ» Ã¬ Ã¬Â¡
       isDead: this.player.isDead()
     };
     
@@ -846,6 +853,12 @@ export class GameScene extends Phaser.Scene {
     // Create obstacles if not yet created and obstacle data exists
     if (!this.obstaclesCreated && roomState.obstacles) {
       this.createObstaclesFromServer(roomState.obstacles);
+    }
+    
+    // Update game time if it has changed
+    if (roomState && roomState.gameTime !== undefined && roomState.gameTime !== this.lastGameTime) {
+      this.lastGameTime = roomState.gameTime;
+      this.events.emit("updateGameTime", roomState.gameTime);
     }
   }
 
@@ -916,9 +929,9 @@ export class GameScene extends Phaser.Scene {
           }
           
           // Health update logic - MODIFIED TO HANDLE RESPAWNS
-          // ìë²ê° ëªìì  ì ë³´ë¥¼ ë°ì: ëªìì ì¸ isDead íëê·¸ê° ìëì§ íì¸
+          // Ã¬Ã«Â²ÃªÂ° Ã«ÂªÃ¬Ã¬  Ã¬ Ã«Â³Â´Ã«Â¥Â¼ Ã«Â°Ã¬: Ã«ÂªÃ¬Ã¬ Ã¬Â¸ isDead Ã­Ã«ÃªÂ·Â¸ÃªÂ° Ã¬Ã«Ã¬Â§ Ã­Ã¬Â¸
           if (playerState.isDead) {
-            // ìë²ìì ì£½ì ìíë¼ê³  ë³´ë´ë©´ ë¬´ì¡°ê±´ ì£½ì ìíë¡ ì²ë¦¬
+            // Ã¬Ã«Â²Ã¬Ã¬ Ã¬Â£Â½Ã¬ Ã¬Ã­Ã«Â¼ÃªÂ³  Ã«Â³Â´Ã«Â´Ã«Â©Â´ Ã«Â¬Â´Ã¬Â¡Â°ÃªÂ±Â´ Ã¬Â£Â½Ã¬ Ã¬Ã­Ã«Â¡ Ã¬Â²Ã«Â¦Â¬
             player.setHealth(0);
             this.deadPlayers.add(playerId);
           } else if (this.deadPlayers.has(playerId) && !playerState.forceRemoveFromDeadPlayers) {
